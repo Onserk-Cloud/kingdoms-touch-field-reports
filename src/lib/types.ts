@@ -3,7 +3,7 @@
  * See `supabase/migrations/0001_init.sql` for the source of truth.
  */
 
-export type Role = 'employee' | 'supervisor';
+export type Role = 'employee' | 'supervisor' | 'admin' | 'super_admin';
 
 export type ReportStatus =
   | 'pending'

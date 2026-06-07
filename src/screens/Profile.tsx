@@ -88,9 +88,13 @@ export function Profile() {
                 }}
               >
                 {t(
-                  employee.role === 'supervisor'
-                    ? 'common.roleSupervisor'
-                    : 'common.roleEmployee',
+                  employee.role === 'super_admin'
+                    ? 'common.roleSuperAdmin'
+                    : employee.role === 'admin'
+                      ? 'common.roleAdmin'
+                      : employee.role === 'supervisor'
+                        ? 'common.roleSupervisor'
+                        : 'common.roleEmployee',
                 )}
               </div>
             </div>
@@ -136,7 +140,7 @@ export function Profile() {
           })}
         </div>
 
-        {employee?.role === 'supervisor' && (
+        {employee && employee.role !== 'employee' && (
           <SecondaryButton onClick={() => navigate('/supervisor')}>
             {t('profile.goToSupervisor')}
           </SecondaryButton>

@@ -707,7 +707,7 @@ export function SupervisorDetail() {
             />
           </svg>
         </button>
-        {me?.role === 'supervisor' && (
+        {me && me.role !== 'employee' && (
           <>
             <button
               onClick={requestUpdate}

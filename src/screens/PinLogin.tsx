@@ -29,7 +29,7 @@ export function PinLogin() {
   // If already signed in, jump straight to the right home.
   useEffect(() => {
     if (employee) {
-      navigate(employee.role === 'supervisor' ? '/supervisor' : '/home', {
+      navigate(employee.role === 'employee' ? '/home' : '/supervisor', {
         replace: true,
       });
     }
@@ -60,7 +60,7 @@ export function PinLogin() {
         const s = await signInWithPin(pin);
         if (cancelled) return;
         setEmployee(s.employee);
-        navigate(s.employee.role === 'supervisor' ? '/supervisor' : '/home', {
+        navigate(s.employee.role === 'employee' ? '/home' : '/supervisor', {
           replace: true,
         });
       } catch (err) {

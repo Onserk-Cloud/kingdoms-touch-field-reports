@@ -97,7 +97,7 @@ export function App() {
       <Route
         path="/supervisor"
         element={
-          <RequireAuth supervisorOnly>
+          <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
             <Supervisor />
           </RequireAuth>
         }
@@ -105,7 +105,7 @@ export function App() {
       <Route
         path="/supervisor/report/:id"
         element={
-          <RequireAuth supervisorOnly>
+          <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
             <SupervisorDetail />
           </RequireAuth>
         }
@@ -134,7 +134,7 @@ function EntryPoint() {
       return () => clearTimeout(t);
     }
     if (employee) {
-      navigate(employee.role === 'supervisor' ? '/supervisor' : '/home', {
+      navigate(employee.role === 'employee' ? '/home' : '/supervisor', {
         replace: true,
       });
     } else {
