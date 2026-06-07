@@ -42,7 +42,7 @@ export function MyReports() {
     const list = reports.filter((r) => {
       if (chip === 'week' && r.createdAt < week) return false;
       if (chip === 'pending' && r.status !== 'pending') return false;
-      if (chip === 'reviewed' && r.status !== 'submitted') return false;
+      if (chip === 'reviewed' && r.status !== 'reviewed') return false;
       if (search) {
         const s = search.toLowerCase();
         return (
@@ -63,7 +63,11 @@ export function MyReports() {
   const badgeFor = (s: OfflineReport['status']): BadgeKind => {
     switch (s) {
       case 'submitted':
+        return 'submitted';
+      case 'reviewed':
         return 'reviewed';
+      case 'needs_update':
+        return 'flagged';
       case 'pending':
         return 'pending';
       case 'syncing':

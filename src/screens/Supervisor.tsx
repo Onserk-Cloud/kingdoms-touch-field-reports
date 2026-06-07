@@ -759,6 +759,10 @@ function mapStatus(s: OfflineReport['status']): BadgeKind {
   switch (s) {
     case 'submitted':
       return 'submitted';
+    case 'reviewed':
+      return 'reviewed';
+    case 'needs_update':
+      return 'flagged';
     case 'pending':
       return 'pending';
     case 'syncing':

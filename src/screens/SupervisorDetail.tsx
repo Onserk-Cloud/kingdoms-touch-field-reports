@@ -44,6 +44,7 @@ export function SupervisorDetail() {
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [busy, setBusy] = useState<'approve' | 'request' | 'pdf' | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
     void load();
@@ -138,16 +139,11 @@ export function SupervisorDetail() {
             reviewed_by: me.id,
           })
           .eq('id', row.id);
-        await load();
       } else {
-        // Demo mode: persist best-effort status and reflect it locally.
-        await ktStore.setStatus(row.id, 'submitted');
-        setRow({
-          ...row,
-          status: 'reviewed',
-          reviewed_at: new Date().toISOString(),
-        });
+        // Demo mode: persist the reviewed status so the employee sees it too.
+        await ktStore.setStatus(row.id, 'reviewed');
       }
+      navigate('/supervisor');
     } finally {
       setBusy(null);
     }
@@ -167,16 +163,11 @@ export function SupervisorDetail() {
             reviewed_by: me.id,
           })
           .eq('id', row.id);
-        await load();
       } else {
-        // Demo mode: persist best-effort status and reflect it locally.
-        await ktStore.setStatus(row.id, 'error');
-        setRow({
-          ...row,
-          status: 'needs_update',
-          reviewed_at: new Date().toISOString(),
-        });
+        // Demo mode: persist needs_update so the employee sees it too.
+        await ktStore.setStatus(row.id, 'needs_update');
       }
+      navigate('/supervisor');
     } finally {
       setBusy(null);
     }
@@ -583,6 +574,7 @@ export function SupervisorDetail() {
                   height={92}
                   src={photoUrls[i]}
                   label={`#${i + 1}`}
+                  onClick={() => photoUrls[i] && setLightbox(photoUrls[i])}
                 />
               ))}
             </div>
@@ -769,8 +761,53 @@ export function SupervisorDetail() {
           )}
         </button>
       </div>
-      {/* unused-import guard */}
-      {false && <span>{navigate.length}</span>}
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(null)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 50,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <img
+            src={lightbox}
+            alt=""
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              borderRadius: 8,
+            }}
+          />
+          <button
+            onClick={() => setLightbox(null)}
+            aria-label="Close"
+            className="kt-tap"
+            style={{
+              position: 'absolute',
+              top: 'calc(env(safe-area-inset-top) + 16px)',
+              right: 16,
+              width: 40,
+              height: 40,
+              borderRadius: 999,
+              background: 'rgba(255,255,255,0.15)',
+              color: '#fff',
+              fontSize: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </PhoneFrame>
   );
 }

@@ -58,7 +58,14 @@ export interface OfflineReport {
   notes?: string;
   completionConfirmed: boolean;
   createdAt: number;
-  status: 'draft' | 'pending' | 'syncing' | 'submitted' | 'error';
+  status:
+    | 'draft'
+    | 'pending'
+    | 'syncing'
+    | 'submitted'
+    | 'reviewed'
+    | 'needs_update'
+    | 'error';
   remoteId?: string;
   error?: string;
 }
