@@ -1,0 +1,156 @@
+/* ─── KT global styles ────────────────────────────────────── */
+
+:root {
+  --kt-forest: #1f3d2b;
+  --kt-forest-deep: #15291d;
+  --kt-forest-soft: #2a5238;
+  --kt-gold: #c4984c;
+  --kt-gold-soft: #e0c079;
+  --kt-gold-deep: #9c7228;
+  --kt-charcoal: #1a1a1a;
+  --kt-ink: #2a2620;
+  --kt-ivory: #f7f3e8;
+  --kt-ivory-deep: #ece5d3;
+  --kt-sage: #8fa58b;
+  --kt-sage-soft: #c5d0bd;
+  --kt-line: rgba(31, 61, 43, 0.12);
+  --kt-line-strong: rgba(31, 61, 43, 0.18);
+  --kt-muted: #6b6358;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  /* iOS safe-area + svh for proper full-height on mobile browsers */
+  min-height: 100svh;
+  background: var(--kt-ivory);
+  font-family: 'Manrope', system-ui, -apple-system, Segoe UI, sans-serif;
+  color: var(--kt-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  overscroll-behavior-y: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Hide scrollbars on the inner scrollable regions but keep functionality */
+.kt-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.kt-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tap animation helper */
+.kt-tap {
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.kt-tap:active {
+  transform: scale(0.97);
+}
+
+/* Forms — let the actual <input> field-look match the fake prototype */
+.kt-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--kt-ink);
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.kt-input::placeholder {
+  color: var(--kt-muted);
+}
+
+textarea.kt-input {
+  resize: none;
+  min-height: 56px;
+  line-height: 1.45;
+}
+
+/* Custom checkbox-like toggle */
+.kt-check {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1.5px solid var(--kt-line-strong);
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 140ms ease;
+}
+
+.kt-check:checked {
+  background: var(--kt-forest);
+  border-color: var(--kt-forest);
+}
+
+.kt-check:checked::after {
+  content: '';
+  width: 12px;
+  height: 7px;
+  border-left: 2.2px solid #fff;
+  border-bottom: 2.2px solid #fff;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+/* Status-bar safe inset for installed PWA */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .kt-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .kt-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

@@ -1,0 +1,5 @@
+# Supabase project local config — adjust `project_id` after `supabase init`.
+project_id = "kingdom-touch"
+
+[functions.login-with-pin]
+verify_jwt = false  # this function is the *gateway* to JWTs; it cannot itself require one
