@@ -772,9 +772,9 @@ export function SupervisorDetail() {
           <>
             <button
               onClick={() => {
-            setReasonText('');
-            setReasonOpen(true);
-          }}
+                setReasonText('');
+                setReasonOpen(true);
+              }}
               disabled={busy !== null}
               className="kt-tap"
               style={{

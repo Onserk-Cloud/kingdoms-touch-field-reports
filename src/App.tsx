@@ -14,6 +14,7 @@ import { MyReports } from './screens/MyReports';
 import { Supervisor } from './screens/Supervisor';
 import { SupervisorDetail } from './screens/SupervisorDetail';
 import { EditReport } from './screens/EditReport';
+import { ManageTeam } from './screens/ManageTeam';
 import { Profile } from './screens/Profile';
 
 export function App() {
@@ -100,6 +101,15 @@ export function App() {
         element={
           <RequireAuth>
             <EditReport />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/manage"
+        element={
+          <RequireAuth roles={['admin', 'super_admin']}>
+            <ManageTeam />
           </RequireAuth>
         }
       />

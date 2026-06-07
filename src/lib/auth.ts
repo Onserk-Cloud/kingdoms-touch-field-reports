@@ -165,6 +165,40 @@ export async function signInWithPin(pin: string): Promise<KtSession> {
   return session;
 }
 
+/** Sign in a staff member (supervisor/admin/super_admin) with email + password. */
+export async function signInWithEmail(
+  email: string,
+  password: string,
+): Promise<KtSession> {
+  if (!HAS_SUPABASE) {
+    throw new Error('El acceso por correo requiere Supabase configurado.');
+  }
+  const sb = getSupabase();
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error || !data.session || !data.user) {
+    throw new Error(error?.message || 'Login failed');
+  }
+  const { data: emp, error: empErr } = await sb
+    .from('employees')
+    .select('id, name, role, active, initials, avatar_color, created_at')
+    .eq('auth_user_id', data.user.id)
+    .single();
+  if (empErr || !emp) {
+    await sb.auth.signOut();
+    throw new Error('No hay un perfil de empleado vinculado a esta cuenta.');
+  }
+  const session: KtSession = {
+    employee: emp as unknown as Employee,
+    token: data.session.access_token,
+    refreshToken: data.session.refresh_token,
+    expiresAt: data.session.expires_at
+      ? data.session.expires_at * 1000
+      : Date.now() + 1000 * 60 * 60 * 24 * 30,
+  };
+  persistSession(session);
+  return session;
+}
+
 export async function signOut(): Promise<void> {
   if (HAS_SUPABASE) {
     try {

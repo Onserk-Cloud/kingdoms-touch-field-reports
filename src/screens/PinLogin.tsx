@@ -7,6 +7,7 @@ import {
   getRemember,
   setRemember as setRememberPref,
   signInWithPin,
+  signInWithEmail,
 } from '../lib/auth';
 import { useSessionStore } from '../store/session';
 import { HAS_SUPABASE } from '../lib/supabase';
@@ -25,6 +26,28 @@ export function PinLogin() {
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
   const [remember, setRemember] = useState(() => getRemember());
+  const [mode, setMode] = useState<'pin' | 'email'>('pin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  async function handleEmailLogin() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const s = await signInWithEmail(email.trim(), password);
+      setEmployee(s.employee);
+      navigate(s.employee.role === 'employee' ? '/home' : '/supervisor', {
+        replace: true,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('login.loginFailed'));
+      setShake(true);
+      setTimeout(() => setShake(false), 420);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   // If already signed in, jump straight to the right home.
   useEffect(() => {
@@ -145,7 +168,7 @@ export function PinLogin() {
               lineHeight: 1.05,
             }}
           >
-            {t('login.title')}
+            {mode === 'email' ? t('login.staffTitle') : t('login.title')}
           </div>
           <div
             style={{
@@ -155,68 +178,171 @@ export function PinLogin() {
               fontWeight: 500,
             }}
           >
-            {t('login.subtitle')}
+            {mode === 'email' ? t('login.staffSubtitle') : t('login.subtitle')}
           </div>
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: 18,
-            justifyContent: 'center',
-            margin: '34px 0 12px',
-            animation: shake ? 'kt-shake 0.4s' : undefined,
-          }}
-        >
-          {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-            <Dot key={i} i={i} />
-          ))}
-        </div>
+        {mode === 'pin' ? (
+          <>
+            <div
+              style={{
+                display: 'flex',
+                gap: 18,
+                justifyContent: 'center',
+                margin: '34px 0 12px',
+                animation: shake ? 'kt-shake 0.4s' : undefined,
+              }}
+            >
+              {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+                <Dot key={i} i={i} />
+              ))}
+            </div>
 
-        <div
-          style={{
-            textAlign: 'center',
-            minHeight: 18,
-            fontSize: 12,
-            color: error ? '#A04A2E' : colors.muted,
-            fontWeight: 600,
-            letterSpacing: 0.2,
-            marginBottom: 14,
-          }}
-        >
-          {busy
-            ? t('login.signingIn')
-            : (error ?? (HAS_SUPABASE ? '' : t('login.demoHint')))}
-        </div>
+            <div
+              style={{
+                textAlign: 'center',
+                minHeight: 18,
+                fontSize: 12,
+                color: error ? '#A04A2E' : colors.muted,
+                fontWeight: 600,
+                letterSpacing: 0.2,
+                marginBottom: 14,
+              }}
+            >
+              {busy
+                ? t('login.signingIn')
+                : (error ?? (HAS_SUPABASE ? '' : t('login.demoHint')))}
+            </div>
 
-        <Keypad onPress={press} onClear={clear} disabled={busy} />
+            <Keypad onPress={press} onClear={clear} disabled={busy} />
 
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 14,
-            fontSize: 12.5,
-            color: colors.muted,
-            fontWeight: 600,
-            justifyContent: 'center',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => handleRemember(e.target.checked)}
-            className="kt-check"
-          />
-          {t('login.rememberDevice')}
-        </label>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 14,
+                fontSize: 12.5,
+                color: colors.muted,
+                fontWeight: 600,
+                justifyContent: 'center',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => handleRemember(e.target.checked)}
+                className="kt-check"
+              />
+              {t('login.rememberDevice')}
+            </label>
+          </>
+        ) : (
+          <div style={{ marginTop: 28 }}>
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 14,
+                border: `1px solid ${colors.line}`,
+                padding: '12px 14px',
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  color: colors.goldDeep,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                  marginBottom: 4,
+                }}
+              >
+                {t('login.emailLabel')}
+              </div>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t('login.emailPlaceholder')}
+                type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                className="kt-input"
+              />
+            </div>
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 14,
+                border: `1px solid ${colors.line}`,
+                padding: '12px 14px',
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  color: colors.goldDeep,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                  marginBottom: 4,
+                }}
+              >
+                {t('login.passwordLabel')}
+              </div>
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t('login.passwordPlaceholder')}
+                type="password"
+                className="kt-input"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleEmailLogin();
+                }}
+              />
+            </div>
+            <div
+              style={{
+                textAlign: 'center',
+                minHeight: 18,
+                fontSize: 12,
+                color: error ? '#A04A2E' : colors.muted,
+                fontWeight: 600,
+                marginBottom: 10,
+              }}
+            >
+              {busy ? t('login.signingIn') : (error ?? '')}
+            </div>
+            <button
+              onClick={() => void handleEmailLogin()}
+              disabled={busy || email.trim().length < 3 || !password}
+              className="kt-tap"
+              style={{
+                width: '100%',
+                height: 54,
+                borderRadius: 14,
+                background: colors.forest,
+                color: '#fff',
+                fontFamily: 'Manrope',
+                fontSize: 15,
+                fontWeight: 800,
+                letterSpacing: 0.3,
+                opacity: busy || email.trim().length < 3 || !password ? 0.5 : 1,
+              }}
+            >
+              {t('login.signIn')}
+            </button>
+          </div>
+        )}
 
-        <div style={{ textAlign: 'center', marginTop: 14, marginBottom: 8 }}>
-          <span style={{ fontSize: 13, color: colors.muted, fontWeight: 500 }}>
-            {t('login.forgotPin')}{' '}
-          </span>
-          <span
+        <div style={{ textAlign: 'center', marginTop: 18, marginBottom: 8 }}>
+          <button
+            onClick={() => {
+              setMode(mode === 'pin' ? 'email' : 'pin');
+              setError(null);
+            }}
+            className="kt-tap"
             style={{
               fontSize: 13,
               color: colors.forest,
@@ -225,8 +351,8 @@ export function PinLogin() {
               textUnderlineOffset: 3,
             }}
           >
-            {t('login.contactSupervisor')}
-          </span>
+            {mode === 'pin' ? t('login.staffLogin') : t('login.pinLogin')}
+          </button>
         </div>
       </div>
       <style>{`

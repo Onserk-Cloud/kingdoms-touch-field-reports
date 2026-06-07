@@ -138,7 +138,11 @@ export function EditReport() {
               {t('editReport.changesNeeded')}
             </div>
             <div
-              style={{ fontSize: 13.5, color: colors.charcoal, lineHeight: 1.4 }}
+              style={{
+                fontSize: 13.5,
+                color: colors.charcoal,
+                lineHeight: 1.4,
+              }}
             >
               {reviewNote}
             </div>

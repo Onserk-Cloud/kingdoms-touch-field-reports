@@ -145,6 +145,12 @@ export function Profile() {
             {t('profile.goToSupervisor')}
           </SecondaryButton>
         )}
+        {employee &&
+          (employee.role === 'admin' || employee.role === 'super_admin') && (
+            <SecondaryButton onClick={() => navigate('/manage')}>
+              {t('profile.manageTeam')}
+            </SecondaryButton>
+          )}
         {employee?.role === 'employee' && (
           <SecondaryButton onClick={() => navigate('/my-reports')}>
             {t('profile.viewMyReports')}

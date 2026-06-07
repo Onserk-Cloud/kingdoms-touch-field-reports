@@ -123,10 +123,7 @@ export const ktStore = {
   },
 
   /** Merge a partial patch into a report (status, reviewNote, edited fields…). */
-  async updateReport(
-    id: string,
-    patch: Partial<OfflineReport>,
-  ): Promise<void> {
+  async updateReport(id: string, patch: Partial<OfflineReport>): Promise<void> {
     const d = await db();
     const r = (await d.get('reports', id)) as OfflineReport | undefined;
     if (!r) return;
