@@ -14,6 +14,7 @@ import profile from './profile';
 import tabBar from './tabBar';
 import badge from './badge';
 import pdf from './pdf';
+import editReport from './editReport';
 
 /** All namespace dictionaries. Keys are exposed as `namespace.key`. */
 const NS: Record<string, NsDict> = {
@@ -32,6 +33,7 @@ const NS: Record<string, NsDict> = {
   tabBar,
   badge,
   pdf,
+  editReport,
 };
 
 function build(loc: Locale): Record<string, string> {

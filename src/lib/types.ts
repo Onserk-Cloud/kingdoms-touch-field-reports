@@ -68,6 +68,8 @@ export interface OfflineReport {
     | 'error';
   remoteId?: string;
   error?: string;
+  /** Note from the reviewer explaining what to fix (set on "request changes"). */
+  reviewNote?: string;
 }
 
 export interface OfflinePhoto {

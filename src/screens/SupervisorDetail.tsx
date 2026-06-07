@@ -28,6 +28,7 @@ interface DetailRow {
   status: string;
   submitted_at: string | null;
   reviewed_at: string | null;
+  review_note: string | null;
   completion_confirmed: boolean;
   created_at: string;
   employee: {
@@ -50,6 +51,8 @@ export function SupervisorDetail() {
   const [busy, setBusy] = useState<'approve' | 'request' | 'pdf' | null>(null);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [reasonOpen, setReasonOpen] = useState(false);
+  const [reasonText, setReasonText] = useState('');
 
   useEffect(() => {
     void load();
@@ -87,6 +90,7 @@ export function SupervisorDetail() {
           submitted_at:
             r.status === 'draft' ? null : new Date(r.createdAt).toISOString(),
           reviewed_at: null,
+          review_note: r.reviewNote ?? null,
           completion_confirmed: r.completionConfirmed,
           created_at: new Date(r.createdAt).toISOString(),
           employee: {
@@ -111,7 +115,7 @@ export function SupervisorDetail() {
       const { data, error } = await sb
         .from('reports')
         .select(
-          'id, job_type, location, description, notes, gps_lat, gps_lng, gps_accuracy, status, submitted_at, reviewed_at, completion_confirmed, created_at, employee:employees!inner(id, name, initials, avatar_color), photos:report_photos(id, storage_path, caption)',
+          'id, job_type, location, description, notes, gps_lat, gps_lng, gps_accuracy, status, submitted_at, reviewed_at, review_note, completion_confirmed, created_at, employee:employees!inner(id, name, initials, avatar_color), photos:report_photos(id, storage_path, caption)',
         )
         .eq('id', id)
         .single();
@@ -154,8 +158,9 @@ export function SupervisorDetail() {
     }
   }
 
-  async function requestUpdate() {
+  async function doRequestUpdate(note: string) {
     if (!row) return;
+    setReasonOpen(false);
     setBusy('request');
     try {
       if (HAS_SUPABASE && me) {
@@ -166,11 +171,15 @@ export function SupervisorDetail() {
             status: 'needs_update',
             reviewed_at: new Date().toISOString(),
             reviewed_by: me.id,
+            review_note: note || null,
           })
           .eq('id', row.id);
       } else {
-        // Demo mode: persist needs_update so the employee sees it too.
-        await ktStore.setStatus(row.id, 'needs_update');
+        // Demo mode: persist needs_update + the note so the employee sees it.
+        await ktStore.updateReport(row.id, {
+          status: 'needs_update',
+          reviewNote: note || undefined,
+        });
       }
       navigate('/supervisor');
     } finally {
@@ -343,6 +352,58 @@ export function SupervisorDetail() {
           padding: '16px 20px 30px',
         }}
       >
+        {row.status === 'needs_update' && row.review_note && (
+          <div
+            style={{
+              background: 'rgba(180,90,60,0.10)',
+              border: '1px solid rgba(180,90,60,0.25)',
+              borderRadius: 14,
+              padding: '12px 14px',
+              marginBottom: 14,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10.5,
+                fontWeight: 800,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                color: '#A04A2E',
+                marginBottom: 4,
+              }}
+            >
+              {t('supervisorDetail.changesRequested')}
+            </div>
+            <div
+              style={{
+                fontSize: 13.5,
+                color: colors.charcoal,
+                lineHeight: 1.4,
+              }}
+            >
+              {row.review_note}
+            </div>
+            {me?.role === 'employee' && (
+              <button
+                onClick={() => navigate(`/report/${row.id}/edit`)}
+                className="kt-tap"
+                style={{
+                  marginTop: 10,
+                  width: '100%',
+                  height: 44,
+                  borderRadius: 11,
+                  background: colors.forest,
+                  color: '#fff',
+                  fontFamily: 'Manrope',
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                {t('supervisorDetail.editResubmit')}
+              </button>
+            )}
+          </div>
+        )}
         <div
           style={{
             background: '#fff',
@@ -710,7 +771,10 @@ export function SupervisorDetail() {
         {me && me.role !== 'employee' && (
           <>
             <button
-              onClick={requestUpdate}
+              onClick={() => {
+            setReasonText('');
+            setReasonOpen(true);
+          }}
               disabled={busy !== null}
               className="kt-tap"
               style={{
@@ -769,6 +833,87 @@ export function SupervisorDetail() {
           </>
         )}
       </div>
+      {reasonOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 60,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex',
+            alignItems: 'flex-end',
+          }}
+        >
+          <div
+            className="kt-safe-bottom"
+            style={{
+              background: '#fff',
+              width: '100%',
+              borderRadius: '20px 20px 0 0',
+              padding: '20px 18px 30px',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: 'Cinzel, Georgia, serif',
+                fontSize: 18,
+                color: colors.charcoal,
+                marginBottom: 10,
+              }}
+            >
+              {t('supervisorDetail.reasonTitle')}
+            </div>
+            <textarea
+              value={reasonText}
+              onChange={(e) => setReasonText(e.target.value)}
+              placeholder={t('supervisorDetail.reasonPlaceholder')}
+              className="kt-input"
+              style={{
+                minHeight: 90,
+                width: '100%',
+                background: colors.ivory,
+                borderRadius: 12,
+                padding: 12,
+                border: `1px solid ${colors.line}`,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              <button
+                onClick={() => setReasonOpen(false)}
+                className="kt-tap"
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  border: `1.5px solid ${colors.line}`,
+                  color: colors.muted,
+                  fontFamily: 'Manrope',
+                  fontWeight: 700,
+                }}
+              >
+                {t('supervisorDetail.cancel')}
+              </button>
+              <button
+                onClick={() => doRequestUpdate(reasonText)}
+                disabled={busy !== null}
+                className="kt-tap"
+                style={{
+                  flex: 1.4,
+                  height: 48,
+                  borderRadius: 12,
+                  background: '#A04A2E',
+                  color: '#fff',
+                  fontFamily: 'Manrope',
+                  fontWeight: 800,
+                }}
+              >
+                {busy === 'request' ? '…' : t('supervisorDetail.sendChanges')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {lightbox && (
         <div
           onClick={() => setLightbox(null)}

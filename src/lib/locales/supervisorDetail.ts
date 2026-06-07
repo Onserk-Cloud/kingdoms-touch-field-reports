@@ -18,6 +18,12 @@ const dict: NsDict = {
     completionConfirmed: 'Completion confirmed by employee',
     requestUpdate: 'Request Update',
     approve: 'APPROVE',
+    reasonTitle: 'What needs to change?',
+    reasonPlaceholder: 'Explain what the employee must fix…',
+    sendChanges: 'Send request',
+    cancel: 'Cancel',
+    changesRequested: 'Changes requested',
+    editResubmit: 'Edit & resubmit',
   },
   es: {
     notFoundTitle: 'No encontrado',
@@ -36,6 +42,12 @@ const dict: NsDict = {
     completionConfirmed: 'Finalización confirmada por el empleado',
     requestUpdate: 'Pedir cambios',
     approve: 'APROBAR',
+    reasonTitle: '¿Qué hay que corregir?',
+    reasonPlaceholder: 'Explica qué debe arreglar el empleado…',
+    sendChanges: 'Enviar solicitud',
+    cancel: 'Cancelar',
+    changesRequested: 'Cambios solicitados',
+    editResubmit: 'Editar y reenviar',
   },
 };
 

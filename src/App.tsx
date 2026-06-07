@@ -13,6 +13,7 @@ import { Success } from './screens/Success';
 import { MyReports } from './screens/MyReports';
 import { Supervisor } from './screens/Supervisor';
 import { SupervisorDetail } from './screens/SupervisorDetail';
+import { EditReport } from './screens/EditReport';
 import { Profile } from './screens/Profile';
 
 export function App() {
@@ -90,6 +91,15 @@ export function App() {
         element={
           <RequireAuth>
             <SupervisorDetail />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/report/:id/edit"
+        element={
+          <RequireAuth>
+            <EditReport />
           </RequireAuth>
         }
       />

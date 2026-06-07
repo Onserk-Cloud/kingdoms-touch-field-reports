@@ -122,6 +122,17 @@ export const ktStore = {
     await d.put('reports', r);
   },
 
+  /** Merge a partial patch into a report (status, reviewNote, edited fields…). */
+  async updateReport(
+    id: string,
+    patch: Partial<OfflineReport>,
+  ): Promise<void> {
+    const d = await db();
+    const r = (await d.get('reports', id)) as OfflineReport | undefined;
+    if (!r) return;
+    await d.put('reports', { ...r, ...patch });
+  },
+
   /** All reports for a given employee, newest first. */
   async listReports(employeeId?: string): Promise<OfflineReport[]> {
     const d = await db();
