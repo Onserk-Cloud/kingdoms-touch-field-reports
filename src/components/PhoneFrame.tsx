@@ -65,8 +65,7 @@ export function PhoneFrame({ children, dark = false, bg }: PhoneFrameProps) {
           position: 'relative',
           background,
           color: textColor,
-          boxShadow:
-            '0 30px 70px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.10)',
+          boxShadow: '0 30px 70px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.10)',
           fontFamily: 'Manrope, system-ui, sans-serif',
           WebkitFontSmoothing: 'antialiased',
         }}

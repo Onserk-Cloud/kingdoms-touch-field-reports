@@ -46,7 +46,8 @@ const dict: NsDict = {
     photosHeader: 'Fotos del Trabajo Terminado',
     photosCount: '{n} agregadas · mín 1',
     addPhoto: 'AGREGAR',
-    completionConfirm: 'Confirmo que este trabajo se terminó según el estándar.',
+    completionConfirm:
+      'Confirmo que este trabajo se terminó según el estándar.',
     gpsCapturingTitle: 'Capturando GPS…',
     gpsCapturingSub: 'Mantén el dispositivo quieto',
     gpsReadyTitle: 'Ubicación GPS Capturada',

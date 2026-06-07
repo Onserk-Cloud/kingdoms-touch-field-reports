@@ -50,9 +50,7 @@ export const ktStore = {
   ): Promise<string> {
     const id = partial.id ?? uuid();
     const d = await db();
-    const existing = (await d.get('reports', id)) as
-      | OfflineReport
-      | undefined;
+    const existing = (await d.get('reports', id)) as OfflineReport | undefined;
     const next: OfflineReport = {
       id,
       employeeId: partial.employeeId,
@@ -71,7 +69,11 @@ export const ktStore = {
   },
 
   /** Add a photo blob to a draft / pending report. */
-  async addPhoto(reportId: string, blob: Blob, caption?: string): Promise<string> {
+  async addPhoto(
+    reportId: string,
+    blob: Blob,
+    caption?: string,
+  ): Promise<string> {
     const id = uuid();
     const d = await db();
     await d.put('photos', {
@@ -209,10 +211,7 @@ export const ktStore = {
  * Pass in the uploader once, at app boot.
  */
 export function installAutoFlush(
-  uploader: (
-    r: OfflineReport,
-    photos: OfflinePhoto[],
-  ) => Promise<string>,
+  uploader: (r: OfflineReport, photos: OfflinePhoto[]) => Promise<string>,
   onComplete?: (result: { ok: number; failed: number }) => void,
 ): () => void {
   const handler = async () => {

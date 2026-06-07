@@ -16,7 +16,8 @@ const dict: NsDict = {
     viewAll: 'View all',
     recentReports: 'Recent reports',
     filter: 'Filter',
-    emptyReports: "No reports submitted yet. They'll appear here as crews file them.",
+    emptyReports:
+      "No reports submitted yet. They'll appear here as crews file them.",
     photosCount: '{n} photos',
     open: 'Open →',
   },
@@ -35,7 +36,8 @@ const dict: NsDict = {
     viewAll: 'Ver todo',
     recentReports: 'Reportes recientes',
     filter: 'Filtrar',
-    emptyReports: 'Aún no hay reportes. Aparecerán aquí cuando las cuadrillas los envíen.',
+    emptyReports:
+      'Aún no hay reportes. Aparecerán aquí cuando las cuadrillas los envíen.',
     photosCount: '{n} fotos',
     open: 'Abrir →',
   },

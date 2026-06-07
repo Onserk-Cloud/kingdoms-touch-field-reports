@@ -180,11 +180,7 @@ export function TabBar({ active }: TabBarProps) {
   );
 }
 
-export function AdminTabBar({
-  active,
-}: {
-  active: AdminTab['k'];
-}) {
+export function AdminTabBar({ active }: { active: AdminTab['k'] }) {
   const { colors } = useTheme();
   const navigate = useNavigate();
   const { t } = useI18n();

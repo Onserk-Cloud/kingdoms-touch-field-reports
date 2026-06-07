@@ -87,10 +87,30 @@ export function Camera() {
               position: 'absolute',
             } as const;
             const styles: Record<string, React.CSSProperties> = {
-              tl: { top: 0, left: 0, borderTop: `2px solid ${colors.gold}`, borderLeft: `2px solid ${colors.gold}` },
-              tr: { top: 0, right: 0, borderTop: `2px solid ${colors.gold}`, borderRight: `2px solid ${colors.gold}` },
-              bl: { bottom: 0, left: 0, borderBottom: `2px solid ${colors.gold}`, borderLeft: `2px solid ${colors.gold}` },
-              br: { bottom: 0, right: 0, borderBottom: `2px solid ${colors.gold}`, borderRight: `2px solid ${colors.gold}` },
+              tl: {
+                top: 0,
+                left: 0,
+                borderTop: `2px solid ${colors.gold}`,
+                borderLeft: `2px solid ${colors.gold}`,
+              },
+              tr: {
+                top: 0,
+                right: 0,
+                borderTop: `2px solid ${colors.gold}`,
+                borderRight: `2px solid ${colors.gold}`,
+              },
+              bl: {
+                bottom: 0,
+                left: 0,
+                borderBottom: `2px solid ${colors.gold}`,
+                borderLeft: `2px solid ${colors.gold}`,
+              },
+              br: {
+                bottom: 0,
+                right: 0,
+                borderBottom: `2px solid ${colors.gold}`,
+                borderRight: `2px solid ${colors.gold}`,
+              },
             };
             return <div key={c} style={{ ...base, ...styles[c] }} />;
           })}

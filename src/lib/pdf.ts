@@ -204,9 +204,7 @@ export async function exportReportPdf(
   doc.text(L('footer'), pageWidth / 2, ph - 24, { align: 'center' });
 
   // ─── Save ──────────────────────────────────────────────────
-  const datePart = new Date(report.createdAt)
-    .toISOString()
-    .slice(0, 10);
+  const datePart = new Date(report.createdAt).toISOString().slice(0, 10);
   const filename = `KT-Report-${idLabel}-${datePart}.pdf`;
   doc.save(filename);
 }

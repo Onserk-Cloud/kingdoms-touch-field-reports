@@ -46,7 +46,9 @@ export function Success() {
         }}
         className="kt-safe-top kt-safe-bottom"
       >
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 28 }}>
+        <div
+          style={{ display: 'flex', justifyContent: 'center', marginTop: 28 }}
+        >
           <div
             style={{
               width: 132,
@@ -106,7 +108,9 @@ export function Success() {
               textTransform: 'uppercase',
             }}
           >
-            {t('success.eyebrow', { id: shortReportId(report?.remoteId ?? id) })}
+            {t('success.eyebrow', {
+              id: shortReportId(report?.remoteId ?? id),
+            })}
           </div>
           <div
             style={{

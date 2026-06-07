@@ -62,9 +62,7 @@ export function Review() {
           fontSize: 14,
           fontWeight: 600,
           color: colors.charcoal,
-          fontFamily: mono
-            ? 'ui-monospace, Menlo, monospace'
-            : 'Manrope',
+          fontFamily: mono ? 'ui-monospace, Menlo, monospace' : 'Manrope',
           letterSpacing: mono ? 0.2 : -0.1,
           lineHeight: 1.4,
         }}
@@ -202,8 +200,14 @@ export function Review() {
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <Row label={t('review.labelEmployee')} value={employee?.name ?? '—'} />
-            <Row label={t('review.labelLocation')} value={draft.location || '—'} />
+            <Row
+              label={t('review.labelEmployee')}
+              value={employee?.name ?? '—'}
+            />
+            <Row
+              label={t('review.labelLocation')}
+              value={draft.location || '—'}
+            />
             <Row
               label={t('review.labelGps')}
               value={
@@ -213,7 +217,10 @@ export function Review() {
               }
               mono
             />
-            <Row label={t('review.labelSubmitted')} value={formatDateTime(Date.now())} />
+            <Row
+              label={t('review.labelSubmitted')}
+              value={formatDateTime(Date.now())}
+            />
             <Row
               label={t('common.photos')}
               value={t('review.photosAttached', { n: draft.photos.length })}

@@ -30,7 +30,12 @@ interface DetailRow {
   reviewed_at: string | null;
   completion_confirmed: boolean;
   created_at: string;
-  employee: { id: string; name: string; initials: string; avatar_color: string };
+  employee: {
+    id: string;
+    name: string;
+    initials: string;
+    avatar_color: string;
+  };
   photos: { id: string; storage_path: string; caption: string | null }[];
 }
 
@@ -278,9 +283,7 @@ export function SupervisorDetail() {
           fontSize: 14,
           fontWeight: 600,
           color: colors.charcoal,
-          fontFamily: mono
-            ? 'ui-monospace, Menlo, monospace'
-            : 'Manrope',
+          fontFamily: mono ? 'ui-monospace, Menlo, monospace' : 'Manrope',
           letterSpacing: mono ? 0.2 : -0.1,
           lineHeight: 1.4,
         }}
@@ -590,12 +593,13 @@ export function SupervisorDetail() {
             border: `1px solid ${colors.line}`,
           }}
         >
-          <Row label={t('supervisorDetail.jobTypeLabel')} value={row.job_type} />
+          <Row
+            label={t('supervisorDetail.jobTypeLabel')}
+            value={row.job_type}
+          />
           <Row
             label={t('supervisorDetail.submittedLabel')}
-            value={
-              row.submitted_at ? formatDateTime(row.submitted_at) : '—'
-            }
+            value={row.submitted_at ? formatDateTime(row.submitted_at) : '—'}
           />
           <div
             style={{ height: 1, background: colors.line, margin: '6px 0 14px' }}
@@ -703,63 +707,67 @@ export function SupervisorDetail() {
             />
           </svg>
         </button>
-        <button
-          onClick={requestUpdate}
-          disabled={busy !== null}
-          className="kt-tap"
-          style={{
-            flex: 1,
-            height: 50,
-            borderRadius: 13,
-            background: '#fff',
-            border: `1.5px solid ${colors.forest}`,
-            color: colors.forest,
-            fontFamily: 'Manrope',
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: 0.3,
-          }}
-        >
-          {busy === 'request' ? '…' : t('supervisorDetail.requestUpdate')}
-        </button>
-        <button
-          onClick={approve}
-          disabled={busy !== null}
-          className="kt-tap"
-          style={{
-            flex: 1.2,
-            height: 50,
-            borderRadius: 13,
-            background: colors.forest,
-            color: '#fff',
-            fontFamily: 'Manrope',
-            fontSize: 13,
-            fontWeight: 800,
-            letterSpacing: 0.3,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            boxShadow: '0 6px 14px rgba(31,61,43,0.22)',
-          }}
-        >
-          {busy === 'approve' ? (
-            '…'
-          ) : (
-            <>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M3 7l3 3 5-6"
-                  stroke={colors.gold}
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {t('supervisorDetail.approve')}
-            </>
-          )}
-        </button>
+        {me?.role === 'supervisor' && (
+          <>
+            <button
+              onClick={requestUpdate}
+              disabled={busy !== null}
+              className="kt-tap"
+              style={{
+                flex: 1,
+                height: 50,
+                borderRadius: 13,
+                background: '#fff',
+                border: `1.5px solid ${colors.forest}`,
+                color: colors.forest,
+                fontFamily: 'Manrope',
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: 0.3,
+              }}
+            >
+              {busy === 'request' ? '…' : t('supervisorDetail.requestUpdate')}
+            </button>
+            <button
+              onClick={approve}
+              disabled={busy !== null}
+              className="kt-tap"
+              style={{
+                flex: 1.2,
+                height: 50,
+                borderRadius: 13,
+                background: colors.forest,
+                color: '#fff',
+                fontFamily: 'Manrope',
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: 0.3,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: '0 6px 14px rgba(31,61,43,0.22)',
+              }}
+            >
+              {busy === 'approve' ? (
+                '…'
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path
+                      d="M3 7l3 3 5-6"
+                      stroke={colors.gold}
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {t('supervisorDetail.approve')}
+                </>
+              )}
+            </button>
+          </>
+        )}
       </div>
       {lightbox && (
         <div

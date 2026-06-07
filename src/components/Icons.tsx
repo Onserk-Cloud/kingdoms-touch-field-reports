@@ -17,10 +17,7 @@ export const PinIcon = ({ color = 'currentColor', size = 16 }: IconProps) => (
   </svg>
 );
 
-export const CameraIcon = ({
-  color = '#fff',
-  size = 22,
-}: IconProps) => (
+export const CameraIcon = ({ color = '#fff', size = 22 }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
     <path
       d="M3 7.5C3 6.4 3.9 5.5 5 5.5h2l1.3-2h5.4L15 5.5h2c1.1 0 2 .9 2 2v9c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2v-9z"
@@ -43,10 +40,7 @@ export const CheckIcon = ({ color = '#fff', size = 20 }: IconProps) => (
   </svg>
 );
 
-export const ClockIcon = ({
-  color = 'currentColor',
-  size = 13,
-}: IconProps) => (
+export const ClockIcon = ({ color = 'currentColor', size = 13 }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 13 13" fill="none">
     <circle cx="6.5" cy="6.5" r="5.7" stroke={color} strokeWidth="1.2" />
     <path
@@ -58,10 +52,7 @@ export const ClockIcon = ({
   </svg>
 );
 
-export const BellIcon = ({
-  color = 'currentColor',
-  size = 20,
-}: IconProps) => (
+export const BellIcon = ({ color = 'currentColor', size = 20 }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
     <path
       d="M5 9a5 5 0 0110 0v3l1.5 2.5h-13L5 12V9z"
@@ -82,12 +73,7 @@ export const ChevronRight = ({
   color = 'currentColor',
   size = 12,
 }: IconProps) => (
-  <svg
-    width={(size * 8) / 12}
-    height={size}
-    viewBox="0 0 8 12"
-    fill="none"
-  >
+  <svg width={(size * 8) / 12} height={size} viewBox="0 0 8 12" fill="none">
     <path
       d="M1 1l6 5-6 5"
       stroke={color}
@@ -98,10 +84,7 @@ export const ChevronRight = ({
   </svg>
 );
 
-export const PhotoIcon = ({
-  color = 'currentColor',
-  size = 11,
-}: IconProps) => (
+export const PhotoIcon = ({ color = 'currentColor', size = 11 }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 11 11" fill="none">
     <rect
       x="1"

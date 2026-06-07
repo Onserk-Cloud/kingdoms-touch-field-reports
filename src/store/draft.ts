@@ -11,7 +11,11 @@ export interface DraftState {
   /** Photo blobs the user has captured so far. */
   photos: Array<{ id: string; blob: Blob; previewUrl: string }>;
   completionConfirmed: boolean;
-  set: (patch: Partial<Omit<DraftState, 'set' | 'reset' | 'addPhoto' | 'removePhoto'>>) => void;
+  set: (
+    patch: Partial<
+      Omit<DraftState, 'set' | 'reset' | 'addPhoto' | 'removePhoto'>
+    >,
+  ) => void;
   addPhoto: (blob: Blob) => void;
   removePhoto: (id: string) => void;
   reset: () => void;

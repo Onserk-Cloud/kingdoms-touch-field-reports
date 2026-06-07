@@ -346,14 +346,7 @@ async function makePlaceholderPhoto(
   ctx.fillStyle = p.ground;
   ctx.beginPath();
   ctx.moveTo(0, H * 0.65);
-  ctx.bezierCurveTo(
-    W * 0.3,
-    H * 0.55,
-    W * 0.6,
-    H * 0.72,
-    W,
-    H * 0.6,
-  );
+  ctx.bezierCurveTo(W * 0.3, H * 0.55, W * 0.6, H * 0.72, W, H * 0.6);
   ctx.lineTo(W, H);
   ctx.lineTo(0, H);
   ctx.closePath();

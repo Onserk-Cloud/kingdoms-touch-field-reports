@@ -113,13 +113,28 @@ export function NewReport() {
         }}
       >
         <div
-          style={{ flex: 1, height: 4, borderRadius: 2, background: colors.forest }}
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: 2,
+            background: colors.forest,
+          }}
         />
         <div
-          style={{ flex: 1, height: 4, borderRadius: 2, background: colors.gold }}
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: 2,
+            background: colors.gold,
+          }}
         />
         <div
-          style={{ flex: 1, height: 4, borderRadius: 2, background: colors.line }}
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: 2,
+            background: colors.line,
+          }}
         />
       </div>
 
@@ -284,9 +299,7 @@ export function NewReport() {
               transition: 'all 140ms ease',
             }}
           >
-            {draft.completionConfirmed && (
-              <CheckIcon color="#fff" size={16} />
-            )}
+            {draft.completionConfirmed && <CheckIcon color="#fff" size={16} />}
           </div>
           <input
             type="checkbox"
@@ -338,7 +351,10 @@ function GpsCard({
   const status = (() => {
     switch (state.phase) {
       case 'capturing':
-        return { title: t('newReport.gpsCapturingTitle'), sub: t('newReport.gpsCapturingSub') };
+        return {
+          title: t('newReport.gpsCapturingTitle'),
+          sub: t('newReport.gpsCapturingSub'),
+        };
       case 'ready':
         return {
           title: t('newReport.gpsReadyTitle'),
@@ -352,7 +368,10 @@ function GpsCard({
       case 'error':
         return { title: t('newReport.gpsErrorTitle'), sub: state.message };
       default:
-        return { title: t('newReport.gpsIdleTitle'), sub: t('newReport.gpsIdleSub') };
+        return {
+          title: t('newReport.gpsIdleTitle'),
+          sub: t('newReport.gpsIdleSub'),
+        };
     }
   })();
 

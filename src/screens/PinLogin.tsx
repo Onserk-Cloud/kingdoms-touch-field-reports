@@ -29,10 +29,9 @@ export function PinLogin() {
   // If already signed in, jump straight to the right home.
   useEffect(() => {
     if (employee) {
-      navigate(
-        employee.role === 'supervisor' ? '/supervisor' : '/home',
-        { replace: true },
-      );
+      navigate(employee.role === 'supervisor' ? '/supervisor' : '/home', {
+        replace: true,
+      });
     }
   }, [employee, navigate]);
 
@@ -61,10 +60,9 @@ export function PinLogin() {
         const s = await signInWithPin(pin);
         if (cancelled) return;
         setEmployee(s.employee);
-        navigate(
-          s.employee.role === 'supervisor' ? '/supervisor' : '/home',
-          { replace: true },
-        );
+        navigate(s.employee.role === 'supervisor' ? '/supervisor' : '/home', {
+          replace: true,
+        });
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : t('login.loginFailed'));
@@ -92,8 +90,7 @@ export function PinLogin() {
         height: 16,
         borderRadius: '50%',
         background: i < pin.length ? colors.forest : 'transparent',
-        border:
-          i < pin.length ? 'none' : `1.5px solid ${colors.lineStrong}`,
+        border: i < pin.length ? 'none' : `1.5px solid ${colors.lineStrong}`,
         transition: 'all 0.2s',
       }}
     />
@@ -189,8 +186,7 @@ export function PinLogin() {
         >
           {busy
             ? t('login.signingIn')
-            : error ??
-              (HAS_SUPABASE ? '' : t('login.demoHint'))}
+            : (error ?? (HAS_SUPABASE ? '' : t('login.demoHint')))}
         </div>
 
         <Keypad onPress={press} onClear={clear} disabled={busy} />
@@ -258,13 +254,7 @@ function Keypad({
   const { colors } = useTheme();
   const { t } = useI18n();
 
-  const KeyButton = ({
-    digit,
-    sub,
-  }: {
-    digit: string;
-    sub?: string;
-  }) => (
+  const KeyButton = ({ digit, sub }: { digit: string; sub?: string }) => (
     <button
       onClick={() => onPress(digit)}
       disabled={disabled}

@@ -39,7 +39,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [name, setTheme],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 /** Access the active theme colour palette + setter. */

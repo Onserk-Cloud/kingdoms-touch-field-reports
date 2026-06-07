@@ -51,8 +51,9 @@ export const THEMES: Record<ThemeName, KtColors> = {
   forest: FOREST_GOLD,
 };
 
-const DEFAULT_THEME: ThemeName =
-  ((import.meta.env.VITE_DEFAULT_THEME as ThemeName | undefined) ?? 'forest') as ThemeName;
+const DEFAULT_THEME: ThemeName = ((import.meta.env.VITE_DEFAULT_THEME as
+  | ThemeName
+  | undefined) ?? 'forest') as ThemeName;
 
 const STORAGE_KEY = 'kt:theme';
 

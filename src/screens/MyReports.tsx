@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
 import { TabBar } from '../components/TabBar';
@@ -16,6 +17,7 @@ type ChipKey = 'all' | 'week' | 'pending' | 'reviewed';
 export function MyReports() {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const navigate = useNavigate();
   const employee = useSessionStore((s) => s.employee);
   const [reports, setReports] = useState<OfflineReport[]>([]);
   const [photoCounts, setPhotoCounts] = useState<Record<string, number>>({});
@@ -166,7 +168,10 @@ export function MyReports() {
         }}
       >
         {[
-          { k: 'all' as const, label: t('myReports.chipAll', { n: reports.length }) },
+          {
+            k: 'all' as const,
+            label: t('myReports.chipAll', { n: reports.length }),
+          },
           { k: 'week' as const, label: t('myReports.chipWeek') },
           { k: 'pending' as const, label: t('myReports.chipPending') },
           { k: 'reviewed' as const, label: t('myReports.chipReviewed') },
@@ -236,6 +241,8 @@ export function MyReports() {
         {filtered.map((r) => (
           <div
             key={r.id}
+            onClick={() => navigate(`/report/${r.id}`)}
+            className="kt-tap"
             style={{
               background: '#fff',
               borderRadius: 16,
@@ -245,6 +252,7 @@ export function MyReports() {
               display: 'flex',
               alignItems: 'stretch',
               gap: 12,
+              cursor: 'pointer',
             }}
           >
             <div

@@ -106,16 +106,8 @@ export function Supervisor() {
   }, [rows]);
 
   const employees = useMemo(() => {
-    const map = new Map<
-      string,
-      { name: string; n: number; color: string }
-    >();
-    const palette = [
-      '#7FA66E',
-      colors.gold,
-      colors.sage,
-      colors.forestSoft,
-    ];
+    const map = new Map<string, { name: string; n: number; color: string }>();
+    const palette = ['#7FA66E', colors.gold, colors.sage, colors.forestSoft];
     for (const r of rows) {
       const existing = map.get(r.who);
       if (existing) existing.n += 1;
@@ -129,9 +121,7 @@ export function Supervisor() {
     return Array.from(map.values()).slice(0, 4);
   }, [rows, colors]);
 
-  const visible = rows.filter(
-    (r) => filter === 'all' || r.status === filter,
-  );
+  const visible = rows.filter((r) => filter === 'all' || r.status === filter);
 
   return (
     <PhoneFrame bg={colors.ivory}>
@@ -437,10 +427,7 @@ export function Supervisor() {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               {employees.map((e) => (
-                <div
-                  key={e.name}
-                  style={{ flex: 1, textAlign: 'center' }}
-                >
+                <div key={e.name} style={{ flex: 1, textAlign: 'center' }}>
                   <div
                     style={{
                       width: 38,

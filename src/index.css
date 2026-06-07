@@ -33,7 +33,12 @@ body,
   /* iOS safe-area + svh for proper full-height on mobile browsers */
   min-height: 100svh;
   background: var(--kt-ivory);
-  font-family: 'Manrope', system-ui, -apple-system, Segoe UI, sans-serif;
+  font-family:
+    'Manrope',
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    sans-serif;
   color: var(--kt-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -87,7 +92,9 @@ input[type='number'] {
 
 /* Tap animation helper */
 .kt-tap {
-  transition: transform 120ms ease, opacity 120ms ease;
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease;
 }
 
 .kt-tap:active {
