@@ -1,4 +1,4 @@
-name: Build & Deploy to Netlify
+name: CI — build & checks
 
 on:
   push:
@@ -40,23 +40,9 @@ jobs:
           VITE_DEFAULT_THEME: forest
         run: npm run build
 
-      - name: Deploy to Netlify
-        if: github.ref == 'refs/heads/main'
-        uses: nwtgck/actions-netlify@v3.0
-        with:
-          publish-dir: ./dist
-          production-deploy: true
-          deploy-message: 'Deploy from GitHub Actions · ${{ github.sha }}'
-          enable-pull-request-comment: false
-          enable-commit-comment: true
-          overwrites-pull-request-comment: true
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        timeout-minutes: 10
-
+      # Deploy is handled by Netlify's native Git integration (public repo),
+      # so CI here only verifies the build + checks — no double deploy.
       - name: Upload dist artifact
-        if: github.ref != 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: kt-dist
