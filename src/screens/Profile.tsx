@@ -209,7 +209,7 @@ export function Profile() {
               marginTop: 6,
             }}
           >
-            Kingdoms Touch · v 2.4
+            Kingdoms Touch Services · v 2.4
           </div>
         </div>
       </div>

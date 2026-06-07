@@ -1,4 +1,4 @@
-# Kingdom Touch · Field Reports
+# Kingdoms Touch Services · Field Reports
 
 PWA offline-first para reportes de campo de **Kingdoms Touch Services**
 (Florida). Vite + React + TypeScript + Supabase, lista para producción.

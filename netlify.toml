@@ -1,4 +1,4 @@
-# ─── Netlify config for Kingdom Touch · Field Reports PWA ───────
+# ─── Netlify config for Kingdoms Touch Services · Field Reports PWA ───────
 [build]
   command   = "npm run build"
   publish   = "dist"

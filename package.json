@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Kingdom Touch · Field Reports PWA",
+  "description": "Kingdoms Touch Services · Field Reports PWA",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

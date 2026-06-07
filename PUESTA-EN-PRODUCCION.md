@@ -1,4 +1,4 @@
-# Puesta en producción — Kingdom Touch · Field Reports
+# Puesta en producción — Kingdoms Touch Services · Field Reports
 
 Guía para pasar de **modo demo** (datos de ejemplo en el teléfono) a **producción real**
 con Supabase, para que la cuadrilla y el supervisor la usen de verdad.
@@ -109,7 +109,7 @@ set pin_hash = '<EL-HASH-QUE-TE-DIO>'
 where name = 'Sandra Ruiz';   -- repite por cada empleado
 ```
 
-3. Agrega a los empleados reales de Kingdom Touch (con su nombre, rol y PIN propio).
+3. Agrega a los empleados reales de Kingdoms Touch Services (con su nombre, rol y PIN propio).
 
 > Rol: `supervisor` para el encargado, `employee` para los técnicos.
 
