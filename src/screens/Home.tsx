@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { TabBar } from '../components/TabBar';
+import { LogoMark } from '../components/LogoMark';
 import { BellIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { useSessionStore } from '../store/session';
@@ -77,7 +78,7 @@ export function Home() {
             height: 180,
             borderRadius: '50%',
             background:
-              'radial-gradient(circle, rgba(201,162,77,0.22) 0%, transparent 65%)',
+              'radial-gradient(circle, rgba(196,152,76,0.22) 0%, transparent 65%)',
           }}
         />
         <div
@@ -88,81 +89,97 @@ export function Home() {
             marginBottom: 24,
           }}
         >
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              padding: '5px 10px',
-              borderRadius: 999,
-              background: online
-                ? 'rgba(143,165,139,0.25)'
-                : 'rgba(201,162,77,0.20)',
-              border: `1px solid ${online ? 'rgba(143,165,139,0.45)' : 'rgba(201,162,77,0.45)'}`,
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <LogoMark variant="white" size={24} />
             <span
               style={{
-                width: 7,
-                height: 7,
-                borderRadius: 999,
-                background: online ? '#7FD692' : colors.gold,
-                boxShadow: online
-                  ? '0 0 6px #7FD692'
-                  : '0 0 6px rgba(201,162,77,0.8)',
-              }}
-            />
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: 0.8,
-                textTransform: 'uppercase',
+                fontFamily: 'Cinzel, Georgia, serif',
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: 1.4,
+                color: '#fff',
               }}
             >
-              {online ? t('common.online') : t('common.offline')}
+              KINGDOMS TOUCH
             </span>
           </div>
-          <button
-            onClick={() => navigate('/notifications')}
-            aria-label={t('home.notifications')}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.10)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
-            className="kt-tap"
-          >
-            <BellIcon color="#fff" size={18} />
-            {unread > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                padding: '5px 10px',
+                borderRadius: 999,
+                background: online
+                  ? 'rgba(143,165,139,0.25)'
+                  : 'rgba(196,152,76,0.20)',
+                border: `1px solid ${online ? 'rgba(143,165,139,0.45)' : 'rgba(196,152,76,0.45)'}`,
+              }}
+            >
               <span
                 style={{
-                  position: 'absolute',
-                  top: 2,
-                  right: 2,
-                  minWidth: 16,
-                  height: 16,
-                  padding: '0 4px',
+                  width: 7,
+                  height: 7,
                   borderRadius: 999,
-                  background: colors.gold,
-                  color: colors.forest,
-                  fontSize: 10,
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: `1.5px solid ${colors.forest}`,
+                  background: online ? '#7FD692' : colors.gold,
+                  boxShadow: online
+                    ? '0 0 6px #7FD692'
+                    : '0 0 6px rgba(196,152,76,0.8)',
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
                 }}
               >
-                {unread > 9 ? '9+' : unread}
+                {online ? t('common.online') : t('common.offline')}
               </span>
-            )}
-          </button>
+            </div>
+            <button
+              onClick={() => navigate('/notifications')}
+              aria-label={t('home.notifications')}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                background: 'rgba(255,255,255,0.10)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+              }}
+              className="kt-tap"
+            >
+              <BellIcon color="#fff" size={18} />
+              {unread > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    minWidth: 16,
+                    height: 16,
+                    padding: '0 4px',
+                    borderRadius: 999,
+                    background: colors.gold,
+                    color: colors.forest,
+                    fontSize: 10,
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `1.5px solid ${colors.forest}`,
+                  }}
+                >
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
         <div
           style={{
@@ -408,7 +425,7 @@ export function Home() {
                 borderRadius: 12,
                 flexShrink: 0,
                 background: row.highlight
-                  ? 'rgba(201,162,77,0.14)'
+                  ? 'rgba(196,152,76,0.14)'
                   : colors.ivoryDeep,
                 display: 'flex',
                 alignItems: 'center',

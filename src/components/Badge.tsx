@@ -29,7 +29,7 @@ export function Badge({ kind, label }: BadgeProps) {
       dot: colors.sage,
     },
     pending: {
-      bg: 'rgba(201,162,77,0.16)',
+      bg: 'rgba(196,152,76,0.16)',
       fg: colors.goldDeep,
       label: t('badge.pending'),
       dot: colors.gold,

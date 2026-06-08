@@ -47,7 +47,7 @@ export async function exportReportPdf(
   doc.text('KINGDOMS TOUCH SERVICES', margin, 38);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(201, 162, 77);
+  doc.setTextColor(196, 152, 76);
   doc.text(L('fieldReport').toUpperCase(), margin, 54);
 
   doc.setTextColor(255, 255, 255);

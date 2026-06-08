@@ -349,8 +349,8 @@ export function Supervisor() {
               flex: 1,
               padding: 14,
               borderRadius: 16,
-              background: 'rgba(201,162,77,0.10)',
-              border: `1px solid rgba(201,162,77,0.30)`,
+              background: 'rgba(196,152,76,0.10)',
+              border: `1px solid rgba(196,152,76,0.30)`,
               display: 'flex',
               alignItems: 'center',
               gap: 10,
@@ -722,7 +722,7 @@ function Stat({
             height: 80,
             borderRadius: '50%',
             background:
-              'radial-gradient(circle, rgba(201,162,77,0.30) 0%, transparent 70%)',
+              'radial-gradient(circle, rgba(196,152,76,0.30) 0%, transparent 70%)',
           }}
         />
       )}

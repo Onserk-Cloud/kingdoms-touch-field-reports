@@ -43,7 +43,7 @@ export function PrimaryButton({
         letterSpacing: 0.3,
         boxShadow:
           color === 'gold'
-            ? '0 4px 14px rgba(201,162,77,0.30), inset 0 1px 0 rgba(255,255,255,0.30)'
+            ? '0 4px 14px rgba(196,152,76,0.30), inset 0 1px 0 rgba(255,255,255,0.30)'
             : '0 6px 18px rgba(31,61,43,0.25), inset 0 1px 0 rgba(255,255,255,0.07)',
         opacity: disabled ? 0.55 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',

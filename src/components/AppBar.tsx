@@ -89,8 +89,9 @@ export function AppBar({
         )}
         <div
           style={{
-            fontSize: 18,
-            fontWeight: 700,
+            fontFamily: 'Cinzel, Georgia, serif',
+            fontSize: 19,
+            fontWeight: 600,
             color: txt,
             letterSpacing: -0.2,
             whiteSpace: 'nowrap',

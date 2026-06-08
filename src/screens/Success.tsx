@@ -55,7 +55,7 @@ export function Success() {
               height: 132,
               borderRadius: '50%',
               background:
-                'radial-gradient(circle, rgba(201,162,77,0.18) 0%, transparent 70%)',
+                'radial-gradient(circle, rgba(196,152,76,0.18) 0%, transparent 70%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -81,7 +81,7 @@ export function Success() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow:
-                  '0 12px 28px rgba(201,162,77,0.35), inset 0 2px 0 rgba(255,255,255,0.4)',
+                  '0 12px 28px rgba(196,152,76,0.35), inset 0 2px 0 rgba(255,255,255,0.4)',
                 animation: 'kt-pop 0.6s ease-out',
               }}
             >

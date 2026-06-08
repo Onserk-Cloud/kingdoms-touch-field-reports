@@ -409,7 +409,7 @@ function GpsCard({
           width: 44,
           height: 44,
           borderRadius: 12,
-          background: 'rgba(201,162,77,0.20)',
+          background: 'rgba(196,152,76,0.20)',
           border: `1px solid ${colors.gold}`,
           display: 'flex',
           alignItems: 'center',

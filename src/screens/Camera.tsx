@@ -51,7 +51,7 @@ export function Camera() {
             inset: 0,
             opacity: 0.4,
             background:
-              'radial-gradient(ellipse at center, rgba(201,162,77,0.08) 0%, transparent 60%)',
+              'radial-gradient(ellipse at center, rgba(196,152,76,0.08) 0%, transparent 60%)',
           }}
         />
         <div
@@ -215,7 +215,7 @@ export function Camera() {
           borderTopLeftRadius: 26,
           borderTopRightRadius: 26,
           padding: '18px 18px 40px',
-          borderTop: `1px solid rgba(201,162,77,0.20)`,
+          borderTop: `1px solid rgba(196,152,76,0.20)`,
         }}
       >
         {/* Gallery */}
@@ -270,7 +270,7 @@ export function Camera() {
                   position: 'relative',
                   flexShrink: 0,
                   overflow: 'hidden',
-                  border: `1px solid rgba(201,162,77,0.25)`,
+                  border: `1px solid rgba(196,152,76,0.25)`,
                   background: '#000',
                   cursor: 'pointer',
                 }}
@@ -309,7 +309,7 @@ export function Camera() {
                 borderRadius: 11,
                 flexShrink: 0,
                 background: 'rgba(255,255,255,0.05)',
-                border: `1.2px dashed rgba(201,162,77,0.45)`,
+                border: `1.2px dashed rgba(196,152,76,0.45)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

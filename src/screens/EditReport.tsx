@@ -104,7 +104,11 @@ export function EditReport() {
 
   return (
     <PhoneFrame bg={colors.ivory}>
-      <AppBar title={t('editReport.title')} onBack={() => navigate(-1)} />
+      <AppBar
+        title={t('editReport.title')}
+        eyebrow={t('editReport.eyebrow')}
+        onBack={() => navigate(-1)}
+      />
       <div
         className="kt-scroll"
         style={{
