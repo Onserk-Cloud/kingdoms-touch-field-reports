@@ -137,6 +137,14 @@ export function ManageTeam() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  // Reset-access modal state.
+  const [resetFor, setResetFor] = useState<Member | null>(null);
+  const [resetMethod, setResetMethod] = useState<'pin' | 'password'>('pin');
+  const [resetPin, setResetPin] = useState('');
+  const [resetPwd, setResetPwd] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+
   const assignableRoles: Role[] =
     me?.role === 'super_admin'
       ? ['employee', 'supervisor', 'admin', 'super_admin']
@@ -197,6 +205,44 @@ export function ManageTeam() {
     await sb.from('employees').update({ active: !m.active }).eq('id', m.id);
     await load();
   }
+
+  function openReset(m: Member) {
+    setResetFor(m);
+    setResetMethod(m.role === 'employee' ? 'pin' : 'password');
+    setResetPin('');
+    setResetPwd('');
+    setResetMsg(null);
+  }
+
+  async function doReset() {
+    if (!resetFor) return;
+    setResetBusy(true);
+    setResetMsg(null);
+    try {
+      const sb = getSupabase();
+      const body =
+        resetMethod === 'pin'
+          ? { action: 'reset_pin', employeeId: resetFor.id, pin: resetPin }
+          : {
+              action: 'reset_password',
+              employeeId: resetFor.id,
+              password: resetPwd,
+            };
+      const { error } = await sb.functions.invoke('admin-users', { body });
+      if (error) throw error;
+      setResetMsg(t('manage.resetOk'));
+      setResetPin('');
+      setResetPwd('');
+      setTimeout(() => setResetFor(null), 900);
+    } catch {
+      setResetMsg(t('manage.saveError'));
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
+  const canReset =
+    resetMethod === 'pin' ? /^\d{4}$/.test(resetPin) : resetPwd.length >= 6;
 
   const badgeForRole = (r: Role): BadgeKind =>
     r === 'employee'
@@ -417,28 +463,155 @@ export function ManageTeam() {
                     />
                   </div>
                 </div>
-                {me?.id !== m.id && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                    flexShrink: 0,
+                  }}
+                >
                   <button
-                    onClick={() => toggleActive(m)}
+                    onClick={() => openReset(m)}
                     className="kt-tap"
                     style={{
                       fontSize: 11,
                       fontWeight: 700,
-                      color: m.active ? '#A04A2E' : colors.forest,
+                      color: colors.forest,
                       padding: '6px 10px',
                       borderRadius: 8,
                       border: `1px solid ${colors.line}`,
-                      flexShrink: 0,
                     }}
                   >
-                    {m.active ? t('manage.deactivate') : t('manage.activate')}
+                    {t('manage.reset')}
                   </button>
-                )}
+                  {me?.id !== m.id && (
+                    <button
+                      onClick={() => toggleActive(m)}
+                      className="kt-tap"
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: m.active ? '#A04A2E' : colors.forest,
+                        padding: '6px 10px',
+                        borderRadius: 8,
+                        border: `1px solid ${colors.line}`,
+                      }}
+                    >
+                      {m.active ? t('manage.deactivate') : t('manage.activate')}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </>
         )}
       </div>
+      {resetFor && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 60,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex',
+            alignItems: 'flex-end',
+          }}
+        >
+          <div
+            className="kt-safe-bottom"
+            style={{
+              background: '#fff',
+              width: '100%',
+              borderRadius: '20px 20px 0 0',
+              padding: '20px 18px 30px',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: 'Cinzel, Georgia, serif',
+                fontSize: 18,
+                color: colors.charcoal,
+                marginBottom: 12,
+              }}
+            >
+              {t('manage.resetTitle', { name: resetFor.name })}
+            </div>
+            <Seg
+              label={t('manage.accessType')}
+              value={resetMethod}
+              onChange={(v) => setResetMethod(v as 'pin' | 'password')}
+              options={[
+                ['pin', t('manage.methodPin')],
+                ['password', t('manage.methodPassword')],
+              ]}
+              colors={colors}
+            />
+            {resetMethod === 'pin' ? (
+              <LabeledInput
+                label={t('manage.newPin')}
+                value={resetPin}
+                onChange={(v) => setResetPin(v.replace(/\D/g, '').slice(0, 4))}
+                colors={colors}
+              />
+            ) : (
+              <LabeledInput
+                label={t('manage.newPassword')}
+                value={resetPwd}
+                onChange={setResetPwd}
+                type="password"
+                colors={colors}
+              />
+            )}
+            {resetMsg && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: colors.muted,
+                  margin: '6px 0',
+                  fontWeight: 600,
+                }}
+              >
+                {resetMsg}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+              <button
+                onClick={() => setResetFor(null)}
+                className="kt-tap"
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  border: `1.5px solid ${colors.line}`,
+                  color: colors.muted,
+                  fontFamily: 'Manrope',
+                  fontWeight: 700,
+                }}
+              >
+                {t('manage.cancel')}
+              </button>
+              <button
+                onClick={doReset}
+                disabled={resetBusy || !canReset}
+                className="kt-tap"
+                style={{
+                  flex: 1.4,
+                  height: 48,
+                  borderRadius: 12,
+                  background: colors.forest,
+                  color: '#fff',
+                  fontFamily: 'Manrope',
+                  fontWeight: 800,
+                  opacity: resetBusy || !canReset ? 0.5 : 1,
+                }}
+              >
+                {resetBusy ? t('manage.creating') : t('manage.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PhoneFrame>
   );
 }

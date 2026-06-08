@@ -49,7 +49,7 @@ export function Supervisor() {
         const { data, error } = await sb
           .from('reports')
           .select(
-            'id, job_type, location, status, submitted_at, created_at, employee_id, employees!inner(name), report_photos(id)',
+            'id, job_type, location, status, submitted_at, created_at, employee_id, employees!employee_id(name), report_photos(id)',
           )
           .order('created_at', { ascending: false })
           .limit(50);

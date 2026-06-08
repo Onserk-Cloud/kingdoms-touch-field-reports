@@ -1,12 +1,14 @@
 /**
  * Supabase Edge Function: admin-users
  *
- * Lets an admin / super_admin create team members:
- *   - access "pin":   field employee (bcrypt-hashed 4-digit PIN)
- *   - access "email": staff (Supabase Auth email + password) → supervisor/admin/…
+ * Lets an admin / super_admin manage team members:
+ *   - create, access "pin":   field employee (bcrypt-hashed 4-digit PIN)
+ *   - create, access "email": staff (Supabase Auth email + password)
+ *   - reset_pin:      set a new 4-digit PIN for an employee
+ *   - reset_password: set a new password for an email/staff account
  *
  * Security: the caller's JWT is verified, their employee role is checked, and
- * only a super_admin may create admin / super_admin members.
+ * only a super_admin may create/modify admin / super_admin members.
  *
  * Deploy:  supabase functions deploy admin-users   (keep Verify JWT = ON)
  */
@@ -25,6 +27,24 @@ const cors = {
     'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+// True if `pin` already matches some *active* employee (optionally excluding one).
+// Prevents two people sharing a PIN, which would log into the wrong account.
+async function pinTaken(
+  admin: any,
+  pin: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const { data } = await admin
+    .from('employees')
+    .select('id, pin_hash')
+    .eq('active', true);
+  for (const e of data ?? []) {
+    if (exceptId && e.id === exceptId) continue;
+    if (e.pin_hash && (await bcrypt.compare(pin, e.pin_hash))) return true;
+  }
+  return false;
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -55,22 +75,84 @@ serve(async (req: Request) => {
     }
 
     const body = await req.json();
+    const action = (body?.action as string) ?? 'create';
+
+    // Only a super_admin can touch admin / super_admin rows.
+    const requiresSuper = (role?: string) =>
+      role === 'admin' || role === 'super_admin';
+
+    /* ── Reset a 4-digit PIN ─────────────────────────────────── */
+    if (action === 'reset_pin') {
+      const { employeeId, pin } = body ?? {};
+      if (!employeeId || !/^\d{4}$/.test(pin ?? '')) {
+        return json({ error: 'PIN must be 4 digits' }, 400);
+      }
+      const { data: target } = await admin
+        .from('employees')
+        .select('role')
+        .eq('id', employeeId)
+        .single();
+      if (!target) return json({ error: 'Member not found' }, 404);
+      if (requiresSuper(target.role) && callerRole !== 'super_admin') {
+        return json({ error: 'Only super admin can reset admins' }, 403);
+      }
+      if (await pinTaken(admin, pin, employeeId)) {
+        return json({ error: 'PIN already in use. Choose another.' }, 409);
+      }
+      const hash = await bcrypt.hash(pin, 10);
+      const { error } = await admin
+        .from('employees')
+        .update({ pin_hash: hash })
+        .eq('id', employeeId);
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    /* ── Reset an email/staff password ───────────────────────── */
+    if (action === 'reset_password') {
+      const { employeeId, password } = body ?? {};
+      if (!employeeId || !password || String(password).length < 6) {
+        return json({ error: 'Password must be at least 6 characters' }, 400);
+      }
+      const { data: target } = await admin
+        .from('employees')
+        .select('role, auth_user_id')
+        .eq('id', employeeId)
+        .single();
+      if (!target) return json({ error: 'Member not found' }, 404);
+      if (requiresSuper(target.role) && callerRole !== 'super_admin') {
+        return json({ error: 'Only super admin can reset admins' }, 403);
+      }
+      if (!target.auth_user_id) {
+        return json(
+          { error: 'This member has no email login to reset.' },
+          400,
+        );
+      }
+      const { error } = await admin.auth.admin.updateUserById(
+        target.auth_user_id,
+        { password },
+      );
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    /* ── Create a new member (default) ───────────────────────── */
     const { name, role, access, pin, email, password } = body ?? {};
     if (!name || !role || !access) return json({ error: 'Missing fields' }, 400);
     if (!['employee', 'supervisor', 'admin', 'super_admin'].includes(role)) {
       return json({ error: 'Invalid role' }, 400);
     }
-    // Only a super_admin can mint admins / super_admins.
-    if (
-      (role === 'admin' || role === 'super_admin') &&
-      callerRole !== 'super_admin'
-    ) {
+    if (requiresSuper(role) && callerRole !== 'super_admin') {
       return json({ error: 'Only super admin can create admins' }, 403);
     }
 
     if (access === 'pin') {
       if (!/^\d{4}$/.test(pin ?? '')) {
         return json({ error: 'PIN must be 4 digits' }, 400);
+      }
+      if (await pinTaken(admin, pin)) {
+        return json({ error: 'PIN already in use. Choose another.' }, 409);
       }
       const hash = await bcrypt.hash(pin, 10);
       const { error } = await admin

@@ -116,7 +116,7 @@ export function SupervisorDetail() {
       const { data, error } = await sb
         .from('reports')
         .select(
-          'id, job_type, location, description, notes, gps_lat, gps_lng, gps_accuracy, status, submitted_at, reviewed_at, review_note, completion_confirmed, created_at, employee:employees!inner(id, name, initials, avatar_color), photos:report_photos(id, storage_path, caption)',
+          'id, job_type, location, description, notes, gps_lat, gps_lng, gps_accuracy, status, submitted_at, reviewed_at, review_note, completion_confirmed, created_at, employee:employees!employee_id(id, name, initials, avatar_color), photos:report_photos(id, storage_path, caption)',
         )
         .eq('id', id)
         .single();
