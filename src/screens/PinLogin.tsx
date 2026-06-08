@@ -59,7 +59,7 @@ export function PinLogin() {
         replace: true,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('login.loginFailed'));
+      setError(loginErrMsg(err));
       setShake(true);
       setTimeout(() => setShake(false), 420);
     } finally {
@@ -91,6 +91,12 @@ export function PinLogin() {
     setPin('');
   }, [busy]);
 
+  const back = useCallback(() => {
+    if (busy) return;
+    setError(null);
+    setPin((p) => p.slice(0, -1));
+  }, [busy]);
+
   // Auto-submit once 4 digits are entered (only when we know who's logging in).
   useEffect(() => {
     if (mode !== 'pin' || !identified) return;
@@ -111,7 +117,7 @@ export function PinLogin() {
         });
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : t('login.loginFailed'));
+        setError(loginErrMsg(err));
         setShake(true);
         setTimeout(() => setShake(false), 420);
         setTimeout(() => setPin(''), 200);
@@ -128,6 +134,25 @@ export function PinLogin() {
   const handleRemember = (v: boolean) => {
     setRemember(v);
     setRememberPref(v);
+    // Opting out must also drop any identity already saved on this device.
+    if (!v) forgetDeviceEmployee();
+  };
+
+  function loginErrMsg(err: unknown) {
+    const code = (err as { code?: string } | null)?.code;
+    if (code === 'locked') return t('login.errLocked');
+    if (code === 'invalid') return t('login.errInvalid');
+    if (code === 'duplicate') return t('login.errDuplicate');
+    if (code === 'signin_failed' || code === 'server')
+      return t('login.errServer');
+    return err instanceof Error ? err.message : t('login.loginFailed');
+  }
+
+  const editName = () => {
+    // Back to the name step WITHOUT wiping what was typed (fix a typo).
+    setPinStep('identify');
+    setPin('');
+    setError(null);
   };
 
   const changeUser = () => {
@@ -141,7 +166,8 @@ export function PinLogin() {
   };
 
   const goToPin = () => {
-    if (!firstName.trim() || !lastName.trim()) return;
+    // Last name is optional (mononyms / multi-part names are common).
+    if (!firstName.trim()) return;
     setError(null);
     setPin('');
     setPinStep('enter');
@@ -269,7 +295,12 @@ export function PinLogin() {
                   : (error ?? (HAS_SUPABASE ? '' : t('login.demoHint')))}
               </div>
 
-              <Keypad onPress={press} onClear={clear} disabled={busy} />
+              <Keypad
+                onPress={press}
+                onClear={clear}
+                onBackspace={back}
+                disabled={busy}
+              />
 
               <label
                 style={{
@@ -294,7 +325,7 @@ export function PinLogin() {
 
               <div style={{ textAlign: 'center', marginTop: 10 }}>
                 <button
-                  onClick={changeUser}
+                  onClick={deviceEmp ? changeUser : editName}
                   className="kt-tap"
                   style={{
                     fontSize: 12.5,
@@ -304,7 +335,9 @@ export function PinLogin() {
                     textUnderlineOffset: 3,
                   }}
                 >
-                  {t('login.notYou', { name: displayFirst })}
+                  {deviceEmp
+                    ? t('login.notYou', { name: displayFirst })
+                    : t('login.editName')}
                 </button>
               </div>
             </>
@@ -340,7 +373,7 @@ export function PinLogin() {
               )}
               <button
                 onClick={goToPin}
-                disabled={!firstName.trim() || !lastName.trim()}
+                disabled={!firstName.trim()}
                 className="kt-tap"
                 style={{
                   width: '100%',
@@ -353,7 +386,7 @@ export function PinLogin() {
                   fontWeight: 800,
                   letterSpacing: 0.3,
                   marginTop: 6,
-                  opacity: !firstName.trim() || !lastName.trim() ? 0.5 : 1,
+                  opacity: !firstName.trim() ? 0.5 : 1,
                 }}
               >
                 {t('login.continueBtn')}
@@ -546,10 +579,12 @@ function NameField({
 function Keypad({
   onPress,
   onClear,
+  onBackspace,
   disabled,
 }: {
   onPress: (d: string) => void;
   onClear: () => void;
+  onBackspace: () => void;
   disabled?: boolean;
 }) {
   const { colors } = useTheme();
@@ -617,7 +652,34 @@ function Keypad({
       <KeyButton digit="7" sub="PQRS" />
       <KeyButton digit="8" sub="TUV" />
       <KeyButton digit="9" sub="WXYZ" />
-      <div />
+      <button
+        onClick={onBackspace}
+        disabled={disabled}
+        aria-label="Backspace"
+        className="kt-tap"
+        style={{
+          height: 72,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        <svg width="26" height="20" viewBox="0 0 26 20" fill="none">
+          <path
+            d="M8 2h15a1 1 0 011 1v14a1 1 0 01-1 1H8L1 10l7-8z"
+            stroke={colors.muted}
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M12 7l6 6m0-6l-6 6"
+            stroke={colors.muted}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
       <KeyButton digit="0" />
       <button
         onClick={onClear}

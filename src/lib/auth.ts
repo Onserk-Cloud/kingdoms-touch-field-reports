@@ -11,13 +11,27 @@ export interface DeviceEmployee {
   name: string;
 }
 
-const normName = (s: string) =>
-  s
+const COMBINING_MARKS = new RegExp('[\\u0300-\\u036f]', 'g');
+
+/** Tokens of a name, accent/case/punctuation-insensitive. Mirrors the Edge Function. */
+function tokensOf(s: string): string[] {
+  return s
     .normalize('NFD')
-    .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
+    .replace(COMBINING_MARKS, '')
     .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+}
+
+function nameMatches(stored: string, typedTokens: string[]): boolean {
+  if (!typedTokens.length) return false;
+  const st = tokensOf(stored);
+  if (!st.length) return false;
+  if (st.join('') === typedTokens.join('')) return true;
+  return typedTokens.every((t) => st.includes(t));
+}
 
 /** Lightweight session record persisted client-side. */
 export interface KtSession {
@@ -177,7 +191,19 @@ export async function signInWithPin(
     });
 
     if (error) {
-      throw new Error(error.message || 'Login failed');
+      // functions.invoke hides the JSON body on non-2xx; read it from context.
+      let code: string | undefined;
+      let message = error.message || 'Login failed';
+      try {
+        const body = await (error as { context?: Response }).context?.json();
+        if (body?.error) message = body.error as string;
+        if (body?.code) code = body.code as string;
+      } catch {
+        /* ignore */
+      }
+      const e = new Error(message) as Error & { code?: string };
+      e.code = code;
+      throw e;
     }
     if (!data?.employee || !data?.access_token) {
       throw new Error('Invalid response from auth function');
@@ -208,14 +234,17 @@ export async function signInWithPin(
     const e = DEMO_EMPLOYEES_BY_ID[ident.employeeId];
     if (e && DEMO_EMPLOYEES[pin]?.id === e.id) employee = e;
   } else if (ident.name) {
-    const t = normName(ident.name);
-    const e = Object.values(DEMO_EMPLOYEES_BY_ID).find(
-      (x) => normName(x.name) === t,
+    const typed = tokensOf(ident.name);
+    const candidates = Object.values(DEMO_EMPLOYEES_BY_ID).filter((x) =>
+      nameMatches(x.name, typed),
     );
-    if (e && DEMO_EMPLOYEES[pin]?.id === e.id) employee = e;
+    const m = candidates.find((x) => DEMO_EMPLOYEES[pin]?.id === x.id);
+    if (m) employee = m;
   }
   if (!employee) {
-    throw new Error('Invalid name or PIN');
+    const e = new Error('Invalid name or PIN') as Error & { code?: string };
+    e.code = 'invalid';
+    throw e;
   }
   // Simulate latency so UI states are visible.
   await new Promise((r) => setTimeout(r, 350));

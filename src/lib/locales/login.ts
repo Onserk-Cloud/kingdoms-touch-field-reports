@@ -28,6 +28,11 @@ const dict: NsDict = {
     lastNamePlaceholder: 'e.g. Reyes',
     continueBtn: 'Continue',
     notYou: 'Not {name}?',
+    editName: 'Edit name',
+    errInvalid: 'Wrong name or PIN. Check your name and try again.',
+    errLocked: 'Too many attempts. Please wait a few minutes and try again.',
+    errDuplicate: 'Two people share that name and PIN. Contact your admin.',
+    errServer: "Couldn't sign in. Please try again in a moment.",
   },
   es: {
     eyebrow: 'REPORTES DE CAMPO',
@@ -57,6 +62,12 @@ const dict: NsDict = {
     lastNamePlaceholder: 'ej. Reyes',
     continueBtn: 'Continuar',
     notYou: '¿No eres {name}?',
+    editName: 'Editar nombre',
+    errInvalid:
+      'Nombre o PIN incorrecto. Revisa tu nombre e inténtalo de nuevo.',
+    errLocked: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',
+    errDuplicate: 'Dos personas tienen ese nombre y PIN. Contacta a tu admin.',
+    errServer: 'No se pudo entrar. Inténtalo de nuevo en un momento.',
   },
 };
 export default dict;

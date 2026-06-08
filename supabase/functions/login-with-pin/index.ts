@@ -3,8 +3,11 @@
  *
  * Deno runtime. The employee is identified FIRST (by their saved id on a
  * returning device, or by typing their name the first time), and the 4-digit
- * PIN is verified against ONLY that person. This makes shared PINs harmless:
- * two employees can never log into each other's account.
+ * PIN is verified against ONLY that person. Shared PINs are therefore harmless.
+ *
+ * Brute-force defense: a 4-digit PIN is only ~10,000 combinations on a public
+ * endpoint, so failed attempts are counted per identity and the identity is
+ * locked out for a while after too many. (Table: public.login_attempts.)
  *
  * Request body:
  *   { pin, employeeId }  -> returning device (verify PIN for that employee)
@@ -36,18 +39,37 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const MAX_FAILS = 10;
+const LOCK_MINUTES = 15;
+
 // Combining diacritical marks (U+0300..U+036F). Built from an ASCII-only
 // string so copy/paste into the dashboard editor can never mangle it.
 const COMBINING_MARKS = new RegExp('[\\u0300-\\u036f]', 'g');
 
-// Normalize a name for forgiving comparison (accents / case / spacing).
-const norm = (s: string) =>
-  s
+// Tokens of a name, accent/case/punctuation-insensitive. 'José O'Brien-Lee'
+// -> ['jose', 'o', 'brien', 'lee'].
+function tokensOf(s: string): string[] {
+  return s
     .normalize('NFD')
     .replace(COMBINING_MARKS, '')
     .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+}
+
+// Does the typed name plausibly identify the stored name? Matches either the
+// punctuation/space-insensitive whole ("OBrien" == "O'Brien") or a token subset
+// ("Maria Lopez" identifies "Maria Del Carmen Lopez"). A shared PIN still has to
+// match too, so loose name matching can't log you into the wrong account.
+function nameMatches(stored: string, typedTokens: string[]): boolean {
+  if (!typedTokens.length) return false;
+  const st = tokensOf(stored);
+  if (!st.length) return false;
+  if (st.join('') === typedTokens.join('')) return true;
+  return typedTokens.every((t) => st.includes(t));
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -62,10 +84,13 @@ serve(async (req: Request) => {
     };
 
     if (!pin || !/^\d{4}$/.test(pin)) {
-      return json({ error: 'PIN must be 4 digits' }, 400);
+      return json({ error: 'PIN must be 4 digits', code: 'pin_format' }, 400);
     }
     if (!employeeId && !name) {
-      return json({ error: 'Identify with name or employeeId' }, 400);
+      return json(
+        { error: 'Identify with name or device', code: 'identify' },
+        400,
+      );
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -78,11 +103,22 @@ serve(async (req: Request) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // -- Resolve the ONE employee this login is for, then verify the PIN. --
+    // Throttle by identity so a 4-digit PIN can't be hammered.
+    const subject = employeeId
+      ? `emp:${employeeId}`
+      : `name:${tokensOf(name ?? '').join(' ')}`;
+    if (await isLocked(admin, subject)) {
+      return json(
+        { error: 'Too many attempts. Try again later.', code: 'locked' },
+        429,
+      );
+    }
+
+    // ── Resolve the ONE employee this login is for, then verify the PIN. ──
     let match: any = null;
+    let duplicate = false;
 
     if (employeeId) {
-      // Returning device: check the PIN for that specific employee only.
       const { data: emp } = await admin
         .from('employees')
         .select('*')
@@ -91,35 +127,37 @@ serve(async (req: Request) => {
         .maybeSingle();
       if (emp && (await bcrypt.compare(pin, emp.pin_hash))) match = emp;
     } else if (name) {
-      // First time: find the employee(s) with that name, then check the PIN.
-      const target = norm(name);
+      const typed = tokensOf(name);
       const { data: employees, error: empErr } = await admin
         .from('employees')
         .select('*')
         .eq('active', true);
-      if (empErr) return json({ error: empErr.message }, 500);
+      if (empErr) return json({ error: empErr.message, code: 'server' }, 500);
 
-      const byName = (employees ?? []).filter(
-        (e: any) => norm(e.name) === target,
+      const byName = (employees ?? []).filter((e: any) =>
+        nameMatches(e.name, typed),
       );
       const pinMatches: any[] = [];
       for (const e of byName) {
         if (await bcrypt.compare(pin, e.pin_hash)) pinMatches.push(e);
       }
-      if (pinMatches.length === 1) {
-        match = pinMatches[0];
-      } else if (pinMatches.length > 1) {
-        // Same name AND same PIN - ask an admin to disambiguate.
-        return json(
-          { error: 'Duplicate name and PIN. Contact your admin.' },
-          409,
-        );
-      }
+      if (pinMatches.length === 1) match = pinMatches[0];
+      else if (pinMatches.length > 1) duplicate = true;
     }
 
     if (!match) {
-      return json({ error: 'Invalid name or PIN' }, 401);
+      await recordFail(admin, subject);
+      if (duplicate) {
+        return json(
+          { error: 'Duplicate name and PIN. Contact your admin.', code: 'duplicate' },
+          409,
+        );
+      }
+      return json({ error: 'Invalid name or PIN', code: 'invalid' }, 401);
     }
+
+    // Success — clear the failure counter for this identity.
+    await clearFails(admin, subject);
 
     // Ensure an auth.users row exists for this employee.
     let userId = match.auth_user_id as string | null;
@@ -140,7 +178,10 @@ serve(async (req: Request) => {
         });
       if (createErr || !created.user) {
         return json(
-          { error: createErr?.message ?? 'Could not create auth user' },
+          {
+            error: createErr?.message ?? 'Could not create auth user',
+            code: 'server',
+          },
           500,
         );
       }
@@ -173,6 +214,7 @@ serve(async (req: Request) => {
       return json(
         {
           error: signInErr?.message ?? 'Could not sign in',
+          code: 'signin_failed',
           hint: 'Enable the Email provider in Authentication -> Providers.',
         },
         500,
@@ -197,11 +239,50 @@ serve(async (req: Request) => {
     });
   } catch (err) {
     return json(
-      { error: err instanceof Error ? err.message : String(err) },
+      {
+        error: err instanceof Error ? err.message : String(err),
+        code: 'server',
+      },
       500,
     );
   }
 });
+
+/* ── Throttle helpers (public.login_attempts) ──────────────────── */
+
+async function isLocked(admin: any, subject: string): Promise<boolean> {
+  const { data } = await admin
+    .from('login_attempts')
+    .select('locked_until')
+    .eq('subject', subject)
+    .maybeSingle();
+  return !!(
+    data?.locked_until && new Date(data.locked_until).getTime() > Date.now()
+  );
+}
+
+async function recordFail(admin: any, subject: string): Promise<void> {
+  const { data } = await admin
+    .from('login_attempts')
+    .select('fail_count')
+    .eq('subject', subject)
+    .maybeSingle();
+  const fail = (data?.fail_count ?? 0) + 1;
+  const locked_until =
+    fail >= MAX_FAILS
+      ? new Date(Date.now() + LOCK_MINUTES * 60_000).toISOString()
+      : null;
+  await admin.from('login_attempts').upsert({
+    subject,
+    fail_count: fail,
+    locked_until,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function clearFails(admin: any, subject: string): Promise<void> {
+  await admin.from('login_attempts').delete().eq('subject', subject);
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
