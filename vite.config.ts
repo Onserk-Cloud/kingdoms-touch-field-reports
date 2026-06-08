@@ -1,12 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    // Inject CSS via JS instead of a render-blocking <link>, so the static
+    // paint shell renders instantly (matters most over real/slow networks).
+    cssInjectedByJsPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'script-defer',
