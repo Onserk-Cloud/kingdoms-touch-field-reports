@@ -4,8 +4,9 @@
  * Lets an admin / super_admin manage team members:
  *   - create, access "pin":   field employee (bcrypt-hashed 4-digit PIN)
  *   - create, access "email": staff (Supabase Auth email + password)
- *   - reset_pin:      set a new 4-digit PIN for an employee
+ *   - reset_pin:      set a new 4-digit PIN for an employee (also unlocks)
  *   - reset_password: set a new password for an email/staff account
+ *   - unlock:         clear a lockout (after 3 failed PIN tries)
  *
  * Security: the caller's JWT is verified, their employee role is checked, and
  * only a super_admin may create/modify admin / super_admin members.
@@ -27,6 +28,48 @@ const cors = {
     'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+// Combining diacritical marks (U+0300..U+036F), ASCII-safe.
+const COMBINING_MARKS = new RegExp('[\\u0300-\\u036f]', 'g');
+
+// Tokens of a name — must match the login-with-pin throttle key exactly.
+function tokensOf(s: string): string[] {
+  return s
+    .normalize('NFD')
+    .replace(COMBINING_MARKS, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+}
+
+// Clear any lockout rows for an employee (by id and by name subject).
+async function clearLock(
+  admin: any,
+  employeeId: string,
+  name?: string,
+): Promise<void> {
+  const subjects = [`emp:${employeeId}`];
+  if (name) subjects.push(`name:${tokensOf(name).join(' ')}`);
+  await admin.from('login_attempts').delete().in('subject', subjects);
+}
+
+// Insert an employee row. If the first_name/last_name columns don't exist yet
+// (migration 0005 not applied), retry without them so creation still works.
+async function insertEmployee(
+  admin: any,
+  row: Record<string, unknown>,
+): Promise<{ error: { message: string } | null }> {
+  let r = await admin.from('employees').insert(row);
+  if (r.error && /first_name|last_name|column/i.test(r.error.message)) {
+    const clone = { ...row };
+    delete clone.first_name;
+    delete clone.last_name;
+    r = await admin.from('employees').insert(clone);
+  }
+  return r;
+}
 
 // True if `pin` already matches some *active* employee (optionally excluding one).
 // Prevents two people sharing a PIN, which would log into the wrong account.
@@ -89,7 +132,7 @@ serve(async (req: Request) => {
       }
       const { data: target } = await admin
         .from('employees')
-        .select('role')
+        .select('role, name')
         .eq('id', employeeId)
         .single();
       if (!target) return json({ error: 'Member not found' }, 404);
@@ -105,6 +148,24 @@ serve(async (req: Request) => {
         .update({ pin_hash: hash })
         .eq('id', employeeId);
       if (error) return json({ error: error.message }, 500);
+      await clearLock(admin, employeeId, target.name); // reset also unlocks
+      return json({ ok: true });
+    }
+
+    /* ── Unlock a locked-out employee (after 3 failed tries) ───── */
+    if (action === 'unlock') {
+      const { employeeId } = body ?? {};
+      if (!employeeId) return json({ error: 'Missing employeeId' }, 400);
+      const { data: target } = await admin
+        .from('employees')
+        .select('role, name')
+        .eq('id', employeeId)
+        .single();
+      if (!target) return json({ error: 'Member not found' }, 404);
+      if (requiresSuper(target.role) && callerRole !== 'super_admin') {
+        return json({ error: 'Only super admin can unlock admins' }, 403);
+      }
+      await clearLock(admin, employeeId, target.name);
       return json({ ok: true });
     }
 
@@ -138,7 +199,8 @@ serve(async (req: Request) => {
     }
 
     /* ── Create a new member (default) ───────────────────────── */
-    const { name, role, access, pin, email, password } = body ?? {};
+    const { name, first_name, last_name, role, access, pin, email, password } =
+      body ?? {};
     if (!name || !role || !access) return json({ error: 'Missing fields' }, 400);
     if (!['employee', 'supervisor', 'admin', 'super_admin'].includes(role)) {
       return json({ error: 'Invalid role' }, 400);
@@ -155,9 +217,14 @@ serve(async (req: Request) => {
         return json({ error: 'PIN already in use. Choose another.' }, 409);
       }
       const hash = await bcrypt.hash(pin, 10);
-      const { error } = await admin
-        .from('employees')
-        .insert({ name, pin_hash: hash, role, active: true });
+      const { error } = await insertEmployee(admin, {
+        name,
+        first_name: first_name ?? null,
+        last_name: last_name ?? null,
+        pin_hash: hash,
+        role,
+        active: true,
+      });
       if (error) return json({ error: error.message }, 500);
       return json({ ok: true });
     }
@@ -179,8 +246,10 @@ serve(async (req: Request) => {
       // Staff sign in by email, not PIN — store an unusable bcrypt hash so the
       // NOT NULL pin_hash column is satisfied and never matches a 4-digit PIN.
       const placeholder = await bcrypt.hash(crypto.randomUUID(), 10);
-      const { error: insErr } = await admin.from('employees').insert({
+      const { error: insErr } = await insertEmployee(admin, {
         name,
+        first_name: first_name ?? null,
+        last_name: last_name ?? null,
         pin_hash: placeholder,
         role,
         active: true,

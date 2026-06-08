@@ -180,7 +180,13 @@ export function ManageTeam() {
     try {
       const sb = getSupabase();
       const fullName = `${firstName} ${lastName}`.trim();
-      const body: Record<string, unknown> = { name: fullName, role, access };
+      const body: Record<string, unknown> = {
+        name: fullName,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        role,
+        access,
+      };
       if (access === 'pin') body.pin = pin;
       else {
         body.email = email.trim();
@@ -207,6 +213,21 @@ export function ManageTeam() {
     const sb = getSupabase();
     await sb.from('employees').update({ active: !m.active }).eq('id', m.id);
     await load();
+  }
+
+  async function doUnlock(m: Member) {
+    if (!HAS_SUPABASE) return;
+    setMsg(null);
+    try {
+      const sb = getSupabase();
+      const { error } = await sb.functions.invoke('admin-users', {
+        body: { action: 'unlock', employeeId: m.id },
+      });
+      if (error) throw error;
+      setMsg(t('manage.unlockedOk', { name: m.name }));
+    } catch {
+      setMsg(t('manage.saveError'));
+    }
   }
 
   function openReset(m: Member) {
@@ -493,6 +514,20 @@ export function ManageTeam() {
                     }}
                   >
                     {t('manage.reset')}
+                  </button>
+                  <button
+                    onClick={() => doUnlock(m)}
+                    className="kt-tap"
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: colors.goldDeep,
+                      padding: '6px 10px',
+                      borderRadius: 8,
+                      border: `1px solid ${colors.line}`,
+                    }}
+                  >
+                    {t('manage.unlock')}
                   </button>
                   {me?.id !== m.id && (
                     <button

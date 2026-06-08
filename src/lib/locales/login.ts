@@ -30,7 +30,8 @@ const dict: NsDict = {
     notYou: 'Not {name}?',
     editName: 'Edit name',
     errInvalid: 'Wrong name or PIN. Check your name and try again.',
-    errLocked: 'Too many attempts. Please wait a few minutes and try again.',
+    errLocked:
+      'Too many attempts. Your account is locked — contact your admin.',
     errDuplicate: 'Two people share that name and PIN. Contact your admin.',
     errServer: "Couldn't sign in. Please try again in a moment.",
   },
@@ -65,7 +66,8 @@ const dict: NsDict = {
     editName: 'Editar nombre',
     errInvalid:
       'Nombre o PIN incorrecto. Revisa tu nombre e inténtalo de nuevo.',
-    errLocked: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',
+    errLocked:
+      'Demasiados intentos. Tu cuenta está bloqueada — contacta a tu admin.',
     errDuplicate: 'Dos personas tienen ese nombre y PIN. Contacta a tu admin.',
     errServer: 'No se pudo entrar. Inténtalo de nuevo en un momento.',
   },

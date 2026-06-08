@@ -7,7 +7,8 @@
  *
  * Brute-force defense: a 4-digit PIN is only ~10,000 combinations on a public
  * endpoint, so failed attempts are counted per identity and the identity is
- * locked out for a while after too many. (Table: public.login_attempts.)
+ * locked after 3 wrong tries until an admin resets the PIN or unlocks it
+ * (admin-users functions reset_pin / unlock). Table: public.login_attempts.
  *
  * Request body:
  *   { pin, employeeId }  -> returning device (verify PIN for that employee)
@@ -39,8 +40,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const MAX_FAILS = 10;
-const LOCK_MINUTES = 15;
+// 3 wrong tries locks the identity until an admin resets the PIN or unlocks it.
+const MAX_FAILS = 3;
 
 // Combining diacritical marks (U+0300..U+036F). Built from an ASCII-only
 // string so copy/paste into the dashboard editor can never mangle it.
@@ -253,12 +254,11 @@ serve(async (req: Request) => {
 async function isLocked(admin: any, subject: string): Promise<boolean> {
   const { data } = await admin
     .from('login_attempts')
-    .select('locked_until')
+    .select('fail_count')
     .eq('subject', subject)
     .maybeSingle();
-  return !!(
-    data?.locked_until && new Date(data.locked_until).getTime() > Date.now()
-  );
+  // Count-based lock: stays locked until an admin clears it (no auto-expiry).
+  return (data?.fail_count ?? 0) >= MAX_FAILS;
 }
 
 async function recordFail(admin: any, subject: string): Promise<void> {
@@ -268,14 +268,10 @@ async function recordFail(admin: any, subject: string): Promise<void> {
     .eq('subject', subject)
     .maybeSingle();
   const fail = (data?.fail_count ?? 0) + 1;
-  const locked_until =
-    fail >= MAX_FAILS
-      ? new Date(Date.now() + LOCK_MINUTES * 60_000).toISOString()
-      : null;
   await admin.from('login_attempts').upsert({
     subject,
     fail_count: fail,
-    locked_until,
+    locked_until: fail >= MAX_FAILS ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
   });
 }

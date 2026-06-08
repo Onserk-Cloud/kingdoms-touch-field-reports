@@ -33,6 +33,8 @@ const dict: NsDict = {
     save: 'Save',
     cancel: 'Cancel',
     resetOk: 'Access updated.',
+    unlock: 'Unlock',
+    unlockedOk: 'Unlocked {name}.',
   },
   es: {
     title: 'Equipo',
@@ -66,6 +68,8 @@ const dict: NsDict = {
     save: 'Guardar',
     cancel: 'Cancelar',
     resetOk: 'Acceso actualizado.',
+    unlock: 'Desbloquear',
+    unlockedOk: 'Desbloqueado {name}.',
   },
 };
 
