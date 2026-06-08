@@ -38,7 +38,32 @@
     </noscript>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static paint shell: shows instantly (before JS) so FCP/LCP fire on
+           the preloaded logo, not after the React bundle executes. React
+           replaces it on mount; the logo sits in the same spot → no shift. -->
+      <div
+        style="
+          position: fixed;
+          inset: 0;
+          background: #f7f3e8;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 52px 28px 30px;
+          box-sizing: border-box;
+        "
+      >
+        <img
+          src="/brand/logo-full-transparent.webp"
+          alt="Kingdoms Touch Services"
+          width="208"
+          height="200"
+          fetchpriority="high"
+          style="width: 208px; max-width: 78%; height: auto; aspect-ratio: 1600 / 1538;"
+        />
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

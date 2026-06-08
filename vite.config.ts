@@ -1,15 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    // Inject CSS via JS instead of a render-blocking <link> so the static
+    // paint shell in index.html can render immediately (faster FCP/LCP).
+    cssInjectedByJsPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: 'script-defer',
       includeAssets: ['icons/*.png'],
       manifest: {
         name: 'Kingdoms Touch Services · Field Reports',
@@ -62,7 +66,11 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp}'],
+        // Don't precache rarely-used heavy chunks on install — they'd download
+        // on the very first load. They get cached on demand instead.
+        globIgnores: ['**/pdf-*.js', '**/supabase-*.js'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: ({ url }) =>
