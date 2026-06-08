@@ -3,6 +3,21 @@ import type { Employee, Role } from './types';
 
 const SESSION_KEY = 'kt:session';
 const REMEMBER_KEY = 'kt:remember';
+const DEVICE_EMP_KEY = 'kt:device-employee';
+
+/** Identity hint persisted on the device so a returning employee only types a PIN. */
+export interface DeviceEmployee {
+  id: string;
+  name: string;
+}
+
+const normName = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 
 /** Lightweight session record persisted client-side. */
 export interface KtSession {
@@ -108,21 +123,57 @@ export function getRemember(): boolean {
   return window.localStorage.getItem(REMEMBER_KEY) !== '0';
 }
 
+/* ─── Device identity (so a returning employee only types a PIN) ── */
+
+export function rememberDeviceEmployee(emp: DeviceEmployee): void {
+  try {
+    window.localStorage.setItem(
+      DEVICE_EMP_KEY,
+      JSON.stringify({ id: emp.id, name: emp.name }),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getDeviceEmployee(): DeviceEmployee | null {
+  try {
+    const raw = window.localStorage.getItem(DEVICE_EMP_KEY);
+    return raw ? (JSON.parse(raw) as DeviceEmployee) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function forgetDeviceEmployee(): void {
+  try {
+    window.localStorage.removeItem(DEVICE_EMP_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Sign in with a 4-digit PIN. When Supabase is configured, posts to the
  * `login-with-pin` Edge Function which performs the bcrypt check and returns
  * a JWT. In demo mode, validates against an in-memory map.
  */
-export async function signInWithPin(pin: string): Promise<KtSession> {
+export async function signInWithPin(
+  pin: string,
+  ident?: { employeeId?: string; name?: string },
+): Promise<KtSession> {
   if (!/^\d{4}$/.test(pin)) {
     throw new Error('PIN must be 4 digits');
+  }
+  if (!ident?.employeeId && !ident?.name) {
+    throw new Error('Identify with name or device');
   }
 
   // ─── Supabase mode ─────────────────────────────────────────
   if (HAS_SUPABASE) {
     const sb = getSupabase();
     const { data, error } = await sb.functions.invoke('login-with-pin', {
-      body: { pin },
+      body: { pin, employeeId: ident.employeeId, name: ident.name },
     });
 
     if (error) {
@@ -147,13 +198,24 @@ export async function signInWithPin(pin: string): Promise<KtSession> {
         : Date.now() + 1000 * 60 * 60 * 24 * 30, // 30 days
     };
     persistSession(session);
+    if (getRemember()) rememberDeviceEmployee(session.employee);
     return session;
   }
 
   // ─── Demo mode ─────────────────────────────────────────────
-  const employee = DEMO_EMPLOYEES[pin];
+  let employee: Employee | undefined;
+  if (ident.employeeId) {
+    const e = DEMO_EMPLOYEES_BY_ID[ident.employeeId];
+    if (e && DEMO_EMPLOYEES[pin]?.id === e.id) employee = e;
+  } else if (ident.name) {
+    const t = normName(ident.name);
+    const e = Object.values(DEMO_EMPLOYEES_BY_ID).find(
+      (x) => normName(x.name) === t,
+    );
+    if (e && DEMO_EMPLOYEES[pin]?.id === e.id) employee = e;
+  }
   if (!employee) {
-    throw new Error('Invalid PIN');
+    throw new Error('Invalid name or PIN');
   }
   // Simulate latency so UI states are visible.
   await new Promise((r) => setTimeout(r, 350));
@@ -162,6 +224,7 @@ export async function signInWithPin(pin: string): Promise<KtSession> {
     expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30,
   };
   persistSession(session);
+  if (getRemember()) rememberDeviceEmployee(session.employee);
   return session;
 }
 

@@ -1,19 +1,22 @@
 /**
  * Supabase Edge Function: login-with-pin
  *
- * Deno runtime. Validates a 4-digit PIN with bcrypt against the
- * `employees.pin_hash` column, then asks Supabase Auth for a real JWT bound
- * to that employee's auth user (creating one if it doesn't exist yet).
+ * Deno runtime. The employee is identified FIRST (by their saved id on a
+ * returning device, or by typing their name the first time), and the 4-digit
+ * PIN is verified against ONLY that person. This makes shared PINs harmless:
+ * two employees can never log into each other's account.
+ *
+ * Request body:
+ *   { pin, employeeId }  -> returning device (verify PIN for that employee)
+ *   { pin, name }        -> first time (find the named employee, verify PIN)
  *
  * Deploy:
- *   supabase functions deploy login-with-pin
+ *   supabase functions deploy login-with-pin   (Verify JWT = OFF)
  *
- * Required env vars (auto-injected by Supabase — no manual setup needed):
- *   SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY
- *   SUPABASE_ANON_KEY
+ * Required env vars (auto-injected by Supabase - no manual setup needed):
+ *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
  *
- * NOTE: the Email provider must be ENABLED in Authentication → Providers,
+ * NOTE: the Email provider must be ENABLED in Authentication -> Providers,
  * otherwise the signInWithPassword step below returns
  * "Email logins are disabled" and this function 500s.
  */
@@ -22,7 +25,7 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 // @ts-expect-error Deno deps
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-// @ts-expect-error Deno deps — bcryptjs is CommonJS; the functions live on the
+// @ts-expect-error Deno deps - bcryptjs is CommonJS; the functions live on the
 // default export, so `import * as bcrypt` would give `bcrypt.compare === undefined`.
 import bcrypt from 'https://esm.sh/bcryptjs@2.4.3';
 
@@ -33,16 +36,36 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Combining diacritical marks (U+0300..U+036F). Built from an ASCII-only
+// string so copy/paste into the dashboard editor can never mangle it.
+const COMBINING_MARKS = new RegExp('[\\u0300-\\u036f]', 'g');
+
+// Normalize a name for forgiving comparison (accents / case / spacing).
+const norm = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(COMBINING_MARKS, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { pin } = (await req.json()) as { pin?: string };
+    const { pin, employeeId, name } = (await req.json()) as {
+      pin?: string;
+      employeeId?: string;
+      name?: string;
+    };
 
     if (!pin || !/^\d{4}$/.test(pin)) {
       return json({ error: 'PIN must be 4 digits' }, 400);
+    }
+    if (!employeeId && !name) {
+      return json({ error: 'Identify with name or employeeId' }, 400);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -55,27 +78,47 @@ serve(async (req: Request) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Pull all *active* employees and compare bcrypt. PIN space is tiny
-    // (10 000 values) so collisions are possible if you scale; treat this
-    // as a *low-friction* auth, not a high-security one.
-    const { data: employees, error: empErr } = await admin
-      .from('employees')
-      .select('*')
-      .eq('active', true);
-
-    if (empErr) return json({ error: empErr.message }, 500);
-
+    // -- Resolve the ONE employee this login is for, then verify the PIN. --
     let match: any = null;
-    for (const emp of employees ?? []) {
-      const ok = await bcrypt.compare(pin, emp.pin_hash);
-      if (ok) {
-        match = emp;
-        break;
+
+    if (employeeId) {
+      // Returning device: check the PIN for that specific employee only.
+      const { data: emp } = await admin
+        .from('employees')
+        .select('*')
+        .eq('id', employeeId)
+        .eq('active', true)
+        .maybeSingle();
+      if (emp && (await bcrypt.compare(pin, emp.pin_hash))) match = emp;
+    } else if (name) {
+      // First time: find the employee(s) with that name, then check the PIN.
+      const target = norm(name);
+      const { data: employees, error: empErr } = await admin
+        .from('employees')
+        .select('*')
+        .eq('active', true);
+      if (empErr) return json({ error: empErr.message }, 500);
+
+      const byName = (employees ?? []).filter(
+        (e: any) => norm(e.name) === target,
+      );
+      const pinMatches: any[] = [];
+      for (const e of byName) {
+        if (await bcrypt.compare(pin, e.pin_hash)) pinMatches.push(e);
+      }
+      if (pinMatches.length === 1) {
+        match = pinMatches[0];
+      } else if (pinMatches.length > 1) {
+        // Same name AND same PIN - ask an admin to disambiguate.
+        return json(
+          { error: 'Duplicate name and PIN. Contact your admin.' },
+          409,
+        );
       }
     }
 
     if (!match) {
-      return json({ error: 'Invalid PIN' }, 401);
+      return json({ error: 'Invalid name or PIN' }, 401);
     }
 
     // Ensure an auth.users row exists for this employee.
@@ -114,7 +157,7 @@ serve(async (req: Request) => {
     }
 
     // Now sign in *as* that user to mint a JWT we can hand back. Use the
-    // ANON key here (not the service key) — the GoTrue token endpoint expects
+    // ANON key here (not the service key) - the GoTrue token endpoint expects
     // a public key as the apikey, and a service-role key can be rejected.
     const signInClient = createClient(supabaseUrl, anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -130,7 +173,7 @@ serve(async (req: Request) => {
       return json(
         {
           error: signInErr?.message ?? 'Could not sign in',
-          hint: 'Enable the Email provider in Authentication → Providers.',
+          hint: 'Enable the Email provider in Authentication -> Providers.',
         },
         500,
       );
