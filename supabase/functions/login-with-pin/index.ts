@@ -8,9 +8,14 @@
  * Deploy:
  *   supabase functions deploy login-with-pin
  *
- * Required env vars (set in Project → Settings → Functions):
+ * Required env vars (auto-injected by Supabase — no manual setup needed):
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
+ *   SUPABASE_ANON_KEY
+ *
+ * NOTE: the Email provider must be ENABLED in Authentication → Providers,
+ * otherwise the signInWithPassword step below returns
+ * "Email logins are disabled" and this function 500s.
  */
 
 // @ts-expect-error Deno standard import
@@ -41,7 +46,13 @@ serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const admin = createClient(supabaseUrl, serviceKey);
+    const anonKey =
+      Deno.env.get('SUPABASE_ANON_KEY') ??
+      Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ??
+      serviceKey;
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     // Pull all *active* employees and compare bcrypt. PIN space is tiny
     // (10 000 values) so collisions are possible if you scale; treat this
@@ -101,8 +112,12 @@ serve(async (req: Request) => {
       });
     }
 
-    // Now sign in *as* that user to mint a JWT we can hand back.
-    const signInClient = createClient(supabaseUrl, serviceKey);
+    // Now sign in *as* that user to mint a JWT we can hand back. Use the
+    // ANON key here (not the service key) — the GoTrue token endpoint expects
+    // a public key as the apikey, and a service-role key can be rejected.
+    const signInClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     const { data: signed, error: signInErr } =
       await signInClient.auth.signInWithPassword({
         email: placeholderEmail,
@@ -110,8 +125,12 @@ serve(async (req: Request) => {
       });
 
     if (signInErr || !signed.session) {
+      // Most common cause: the Email provider is disabled in Auth settings.
       return json(
-        { error: signInErr?.message ?? 'Could not sign in' },
+        {
+          error: signInErr?.message ?? 'Could not sign in',
+          hint: 'Enable the Email provider in Authentication → Providers.',
+        },
         500,
       );
     }
