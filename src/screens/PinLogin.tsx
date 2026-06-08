@@ -13,6 +13,7 @@ import {
   type DeviceEmployee,
 } from '../lib/auth';
 import { useSessionStore } from '../store/session';
+import { useInstall } from '../lib/pwa-install';
 import { HAS_SUPABASE } from '../lib/supabase';
 import { useI18n } from '../lib/i18n';
 
@@ -32,6 +33,15 @@ export function PinLogin() {
   const [mode, setMode] = useState<'pin' | 'email'>('pin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // PWA install affordance (also lives in Profile; here so first-time users
+  // can install before logging in).
+  const { canInstall, installed, ios, promptInstall } = useInstall();
+  const [showInstallHint, setShowInstallHint] = useState(false);
+  const handleInstall = async () => {
+    if (canInstall) await promptInstall();
+    else setShowInstallHint(true);
+  };
 
   // Identity flow: a returning device remembers who you are, so you only
   // type a PIN. First time, you identify yourself with name + last name.
@@ -501,6 +511,56 @@ export function PinLogin() {
             {mode === 'pin' ? t('login.staffLogin') : t('login.pinLogin')}
           </button>
         </div>
+
+        {!installed && (
+          <div style={{ textAlign: 'center', marginBottom: 6 }}>
+            <button
+              onClick={() => void handleInstall()}
+              className="kt-tap"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12.5,
+                color: colors.goldDeep,
+                fontWeight: 700,
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+                <path
+                  d="M10 3v9m0 0l-3.5-3.5M10 12l3.5-3.5"
+                  stroke={colors.goldDeep}
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M4 16h12"
+                  stroke={colors.goldDeep}
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {t('profile.installApp')}
+            </button>
+            {showInstallHint && (
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: colors.muted,
+                  marginTop: 6,
+                  fontWeight: 500,
+                  lineHeight: 1.4,
+                  padding: '0 10px',
+                }}
+              >
+                {ios
+                  ? t('profile.installIosHint')
+                  : t('profile.installHintOther')}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <style>{`
         @keyframes kt-shake {
