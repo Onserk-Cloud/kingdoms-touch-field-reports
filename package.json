@@ -10,7 +10,8 @@
     "preview": "vite preview --host",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -38,6 +39,7 @@
     "typescript": "^5.5.3",
     "vite": "^5.3.3",
     "vite-plugin-pwa": "^0.20.0",
+    "vitest": "^2.1.9",
     "workbox-window": "^7.1.0"
   },
   "engines": {

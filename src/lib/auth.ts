@@ -1,4 +1,5 @@
 import { HAS_SUPABASE, getSupabase } from './supabase';
+import { nameMatches } from './names';
 import type { Employee, Role } from './types';
 
 const SESSION_KEY = 'kt:session';
@@ -9,28 +10,6 @@ const DEVICE_EMP_KEY = 'kt:device-employee';
 export interface DeviceEmployee {
   id: string;
   name: string;
-}
-
-const COMBINING_MARKS = new RegExp('[\\u0300-\\u036f]', 'g');
-
-/** Tokens of a name, accent/case/punctuation-insensitive. Mirrors the Edge Function. */
-function tokensOf(s: string): string[] {
-  return s
-    .normalize('NFD')
-    .replace(COMBINING_MARKS, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .split(' ')
-    .filter(Boolean);
-}
-
-function nameMatches(stored: string, typedTokens: string[]): boolean {
-  if (!typedTokens.length) return false;
-  const st = tokensOf(stored);
-  if (!st.length) return false;
-  if (st.join('') === typedTokens.join('')) return true;
-  return typedTokens.every((t) => st.includes(t));
 }
 
 /** Lightweight session record persisted client-side. */
@@ -234,9 +213,8 @@ export async function signInWithPin(
     const e = DEMO_EMPLOYEES_BY_ID[ident.employeeId];
     if (e && DEMO_EMPLOYEES[pin]?.id === e.id) employee = e;
   } else if (ident.name) {
-    const typed = tokensOf(ident.name);
     const candidates = Object.values(DEMO_EMPLOYEES_BY_ID).filter((x) =>
-      nameMatches(x.name, typed),
+      nameMatches(x.name, ident.name as string),
     );
     const m = candidates.find((x) => DEMO_EMPLOYEES[pin]?.id === x.id);
     if (m) employee = m;
