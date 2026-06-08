@@ -24,20 +24,37 @@ export function MyReports() {
   const [chip, setChip] = useState<ChipKey>('all');
   const [search, setSearch] = useState('');
   const [sortAsc, setSortAsc] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!employee) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
     void (async () => {
-      const list = await ktStore.listReports(employee.id);
-      setReports(list);
-      const counts: Record<string, number> = {};
-      for (const r of list) {
-        const ph = await ktStore.listPhotos(r.id);
-        counts[r.id] = ph.length;
+      try {
+        const list = await ktStore.listReports(employee.id);
+        const counts: Record<string, number> = {};
+        for (const r of list) {
+          const ph = await ktStore.listPhotos(r.id);
+          counts[r.id] = ph.length;
+        }
+        if (cancelled) return;
+        setReports(list);
+        setPhotoCounts(counts);
+      } catch {
+        if (cancelled) return;
+        setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setPhotoCounts(counts);
     })();
-  }, [employee]);
+    return () => {
+      cancelled = true;
+    };
+  }, [employee, reloadKey]);
 
   const filtered = useMemo(() => {
     const week = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -133,7 +150,13 @@ export function MyReports() {
             gap: 10,
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+          >
             <circle
               cx="7"
               cy="7"
@@ -152,6 +175,7 @@ export function MyReports() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('myReports.searchPlaceholder')}
+            aria-label={t('myReports.searchPlaceholder')}
             className="kt-input"
           />
         </div>
@@ -225,7 +249,60 @@ export function MyReports() {
         >
           {t('myReports.recent')}
         </div>
-        {filtered.length === 0 && (
+        {loading && (
+          <div
+            style={{
+              padding: '40px 20px',
+              textAlign: 'center',
+              color: colors.muted,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            {t('common.loading')}
+          </div>
+        )}
+        {!loading && error && (
+          <div
+            role="alert"
+            style={{
+              padding: '24px 20px',
+              textAlign: 'center',
+              background: colors.dangerSoft,
+              border: `1px solid ${colors.dangerLine}`,
+              borderRadius: 16,
+              marginBottom: 10,
+            }}
+          >
+            <div
+              style={{
+                color: colors.danger,
+                fontSize: 13,
+                fontWeight: 600,
+                marginBottom: 14,
+              }}
+            >
+              {t('common.loadError')}
+            </div>
+            <button
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="kt-tap"
+              style={{
+                minHeight: 44,
+                padding: '0 20px',
+                borderRadius: 12,
+                fontSize: 14,
+                fontWeight: 700,
+                background: colors.danger,
+                color: '#fff',
+                border: 'none',
+              }}
+            >
+              {t('common.retry')}
+            </button>
+          </div>
+        )}
+        {!loading && !error && filtered.length === 0 && (
           <div
             style={{
               padding: '40px 20px',
@@ -238,111 +315,122 @@ export function MyReports() {
             {t('myReports.emptyState')}
           </div>
         )}
-        {filtered.map((r) => (
-          <div
-            key={r.id}
-            onClick={() => navigate(`/report/${r.id}`)}
-            className="kt-tap"
-            style={{
-              background: '#fff',
-              borderRadius: 16,
-              padding: 14,
-              marginBottom: 10,
-              border: `1px solid ${colors.line}`,
-              display: 'flex',
-              alignItems: 'stretch',
-              gap: 12,
-              cursor: 'pointer',
-            }}
-          >
+        {!loading &&
+          !error &&
+          filtered.map((r) => (
             <div
-              style={{
-                width: 3,
-                borderRadius: 2,
-                flexShrink: 0,
-                background:
-                  r.status === 'submitted'
-                    ? colors.forest
-                    : r.status === 'pending'
-                      ? colors.gold
-                      : colors.sage,
+              key={r.id}
+              onClick={() => navigate(`/report/${r.id}`)}
+              role="button"
+              tabIndex={0}
+              aria-label={r.jobType || t('myReports.untitled')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(`/report/${r.id}`);
+                }
               }}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
+              className="kt-tap"
+              style={{
+                background: '#fff',
+                borderRadius: 16,
+                padding: 14,
+                marginBottom: 10,
+                border: `1px solid ${colors.line}`,
+                display: 'flex',
+                alignItems: 'stretch',
+                gap: 12,
+                cursor: 'pointer',
+              }}
+            >
               <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 8,
+                  width: 3,
+                  borderRadius: 2,
+                  flexShrink: 0,
+                  background:
+                    r.status === 'submitted'
+                      ? colors.forest
+                      : r.status === 'pending'
+                        ? colors.gold
+                        : colors.sage,
                 }}
-              >
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontSize: 14.5,
-                    fontWeight: 700,
-                    color: colors.charcoal,
-                    letterSpacing: -0.1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 14.5,
+                      fontWeight: 700,
+                      color: colors.charcoal,
+                      letterSpacing: -0.1,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {r.jobType || t('myReports.untitled')}
+                  </div>
+                  <Badge kind={badgeFor(r.status)} />
+                </div>
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    color: colors.muted,
+                    marginTop: 3,
+                    fontWeight: 500,
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {r.jobType || t('myReports.untitled')}
+                  {r.location}
                 </div>
-                <Badge kind={badgeFor(r.status)} />
-              </div>
-              <div
-                style={{
-                  fontSize: 12.5,
-                  color: colors.muted,
-                  marginTop: 3,
-                  fontWeight: 500,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {r.location}
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  marginTop: 8,
-                }}
-              >
-                <span
+                <div
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
                     alignItems: 'center',
-                    gap: 4,
-                    fontSize: 11,
-                    color: colors.muted,
-                    fontWeight: 600,
+                    gap: 12,
+                    marginTop: 8,
                   }}
                 >
-                  <ClockIcon color={colors.muted} />
-                  {relativeDate(r.createdAt)}
-                </span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    fontSize: 11,
-                    color: colors.muted,
-                    fontWeight: 600,
-                  }}
-                >
-                  <PhotoIcon color={colors.muted} />
-                  {t('myReports.photoCount', { n: photoCounts[r.id] ?? 0 })}
-                </span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 11,
+                      color: colors.muted,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <ClockIcon color={colors.muted} />
+                    {relativeDate(r.createdAt)}
+                  </span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 11,
+                      color: colors.muted,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <PhotoIcon color={colors.muted} />
+                    {t('myReports.photoCount', { n: photoCounts[r.id] ?? 0 })}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
       <TabBar active="reports" />
     </PhoneFrame>

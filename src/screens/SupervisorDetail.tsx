@@ -51,6 +51,7 @@ export function SupervisorDetail() {
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [busy, setBusy] = useState<'approve' | 'request' | 'pdf' | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [reasonOpen, setReasonOpen] = useState(false);
   const [reasonText, setReasonText] = useState('');
@@ -62,6 +63,7 @@ export function SupervisorDetail() {
 
   async function load() {
     setLoading(true);
+    setError(false);
     if (!HAS_SUPABASE) {
       // Demo mode: build the detail view from the IndexedDB-seeded report.
       try {
@@ -130,6 +132,7 @@ export function SupervisorDetail() {
       }
     } catch (err) {
       console.error('[KT] detail load failed', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -257,6 +260,53 @@ export function SupervisorDetail() {
     );
   }
 
+  if (error) {
+    return (
+      <PhoneFrame bg={colors.ivory}>
+        <AppBar title={t('supervisorDetail.notFoundTitle')} />
+        <div
+          style={{
+            padding: '24px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 14,
+          }}
+        >
+          <div
+            style={{
+              background: colors.dangerSoft,
+              border: `1px solid ${colors.dangerLine}`,
+              borderRadius: 14,
+              padding: '14px 16px',
+              color: colors.charcoal,
+              fontSize: 14,
+              fontWeight: 600,
+              lineHeight: 1.4,
+            }}
+          >
+            {t('common.loadError')}
+          </div>
+          <button
+            onClick={() => void load()}
+            className="kt-tap"
+            style={{
+              height: 48,
+              borderRadius: 12,
+              background: colors.forest,
+              color: '#fff',
+              fontFamily: 'Manrope',
+              fontSize: 14,
+              fontWeight: 800,
+              letterSpacing: 0.3,
+            }}
+          >
+            {t('common.retry')}
+          </button>
+        </div>
+      </PhoneFrame>
+    );
+  }
+
   if (!row) {
     return (
       <PhoneFrame bg={colors.ivory}>
@@ -365,8 +415,8 @@ export function SupervisorDetail() {
         {row.status === 'needs_update' && row.review_note && (
           <div
             style={{
-              background: 'rgba(180,90,60,0.10)',
-              border: '1px solid rgba(180,90,60,0.25)',
+              background: colors.dangerSoft,
+              border: `1px solid ${colors.dangerLine}`,
               borderRadius: 14,
               padding: '12px 14px',
               marginBottom: 14,
@@ -378,7 +428,7 @@ export function SupervisorDetail() {
                 fontWeight: 800,
                 letterSpacing: 1,
                 textTransform: 'uppercase',
-                color: '#A04A2E',
+                color: colors.danger,
                 marginBottom: 4,
               }}
             >
@@ -911,7 +961,7 @@ export function SupervisorDetail() {
                   flex: 1.4,
                   height: 48,
                   borderRadius: 12,
-                  background: '#A04A2E',
+                  background: colors.danger,
                   color: '#fff',
                   fontFamily: 'Manrope',
                   fontWeight: 800,

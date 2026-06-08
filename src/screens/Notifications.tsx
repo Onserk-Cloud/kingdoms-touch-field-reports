@@ -39,18 +39,23 @@ export function Notifications() {
 
   const [items, setItems] = useState<KtNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!me) return;
     void (async () => {
       setLoading(true);
+      setError(false);
       try {
         setItems(await listNotifications(me.id));
+      } catch {
+        setError(true);
       } finally {
         setLoading(false);
       }
     })();
-  }, [me]);
+  }, [me, reloadKey]);
 
   async function open(n: KtNotification) {
     if (!n.read) {
@@ -119,7 +124,41 @@ export function Notifications() {
             {t('common.loading')}
           </div>
         )}
-        {!loading && items.length === 0 && (
+        {!loading && error && (
+          <div
+            style={{
+              padding: 30,
+              textAlign: 'center',
+              background: colors.dangerSoft,
+              borderRadius: 16,
+              border: `1px solid ${colors.dangerLine}`,
+              color: colors.danger,
+              fontSize: 13.5,
+              fontWeight: 600,
+            }}
+          >
+            <div>{t('common.loadError')}</div>
+            <button
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="kt-tap"
+              style={{
+                marginTop: 14,
+                minHeight: 44,
+                padding: '0 20px',
+                borderRadius: 12,
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: '#fff',
+                background: colors.danger,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              {t('common.retry')}
+            </button>
+          </div>
+        )}
+        {!loading && !error && items.length === 0 && (
           <div
             style={{
               padding: 30,
@@ -139,6 +178,15 @@ export function Notifications() {
           <div
             key={n.id}
             onClick={() => void open(n)}
+            role="button"
+            tabIndex={0}
+            aria-label={t(titleKey(n.type))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                void open(n);
+              }
+            }}
             className="kt-tap"
             style={{
               display: 'flex',

@@ -12,6 +12,7 @@ const dict: NsDict = {
     offline: 'Offline',
     retry: 'Retry',
     photos: 'Photos',
+    loadError: "Couldn't load. Check your connection and retry.",
   },
   es: {
     loading: 'Cargando…',
@@ -23,6 +24,7 @@ const dict: NsDict = {
     offline: 'Sin conexión',
     retry: 'Reintentar',
     photos: 'Fotos',
+    loadError: 'No se pudo cargar. Revisa tu conexión y reintenta.',
   },
 };
 

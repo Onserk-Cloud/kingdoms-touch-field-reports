@@ -218,6 +218,15 @@ export function Home() {
       <div style={{ padding: '22px 20px 110px' }}>
         <div
           onClick={() => navigate('/new-report')}
+          role="button"
+          tabIndex={0}
+          aria-label={t('home.startNewReport')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/new-report');
+            }
+          }}
           className="kt-tap"
           style={{
             background: '#fff',
@@ -405,6 +414,15 @@ export function Home() {
           <div
             key={row.title}
             onClick={() => navigate(row.to)}
+            role="button"
+            tabIndex={0}
+            aria-label={row.title}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(row.to);
+              }
+            }}
             className="kt-tap"
             style={{
               display: 'flex',

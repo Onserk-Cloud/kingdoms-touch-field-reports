@@ -33,6 +33,7 @@ export function Supervisor() {
   const unread = useUnreadCount();
   const [rows, setRows] = useState<CombinedRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [filter, setFilter] = useState<
     'all' | 'pending' | 'flagged' | 'reviewed'
   >('all');
@@ -43,6 +44,7 @@ export function Supervisor() {
 
   async function load() {
     setLoading(true);
+    setError(false);
     try {
       if (HAS_SUPABASE) {
         const sb = getSupabase();
@@ -87,6 +89,7 @@ export function Supervisor() {
       }
     } catch (err) {
       console.error('[KT] supervisor load failed', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -564,7 +567,40 @@ export function Supervisor() {
           </div>
         )}
 
-        {visible.length === 0 && !loading && (
+        {error && !loading && rows.length === 0 && (
+          <div
+            style={{
+              padding: 24,
+              textAlign: 'center',
+              background: '#fff',
+              borderRadius: 14,
+              border: `1px solid ${colors.line}`,
+              color: colors.muted,
+              fontSize: 13,
+              fontWeight: 500,
+            }}
+          >
+            <div style={{ marginBottom: 14 }}>{t('common.loadError')}</div>
+            <button
+              onClick={() => void load()}
+              className="kt-tap"
+              style={{
+                minHeight: 44,
+                padding: '0 20px',
+                borderRadius: 12,
+                background: colors.forest,
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: 0.3,
+              }}
+            >
+              {t('common.retry')}
+            </button>
+          </div>
+        )}
+
+        {visible.length === 0 && !loading && !(error && rows.length === 0) && (
           <div
             style={{
               padding: 24,
@@ -585,6 +621,15 @@ export function Supervisor() {
           <div
             key={r.id}
             onClick={() => navigate(`/supervisor/report/${r.id}`)}
+            role="button"
+            tabIndex={0}
+            aria-label={r.jobType}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(`/supervisor/report/${r.id}`);
+              }
+            }}
             className="kt-tap"
             style={{
               background: '#fff',
