@@ -128,7 +128,8 @@ export function ManageTeam() {
 
   const [list, setList] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [access, setAccess] = useState<'pin' | 'email'>('pin');
   const [role, setRole] = useState<Role>('employee');
   const [pin, setPin] = useState('');
@@ -178,7 +179,8 @@ export function ManageTeam() {
     setMsg(null);
     try {
       const sb = getSupabase();
-      const body: Record<string, unknown> = { name: name.trim(), role, access };
+      const fullName = `${firstName} ${lastName}`.trim();
+      const body: Record<string, unknown> = { name: fullName, role, access };
       if (access === 'pin') body.pin = pin;
       else {
         body.email = email.trim();
@@ -187,7 +189,8 @@ export function ManageTeam() {
       const { error } = await sb.functions.invoke('admin-users', { body });
       if (error) throw error;
       setMsg(t('manage.createdOk'));
-      setName('');
+      setFirstName('');
+      setLastName('');
       setPin('');
       setEmail('');
       setPassword('');
@@ -252,7 +255,7 @@ export function ManageTeam() {
         : 'reviewed';
 
   const canSubmit =
-    name.trim().length > 1 &&
+    firstName.trim().length > 1 &&
     (access === 'pin'
       ? /^\d{4}$/.test(pin)
       : email.includes('@') && password.length >= 6);
@@ -310,9 +313,15 @@ export function ManageTeam() {
                 {t('manage.addMember')}
               </div>
               <LabeledInput
-                label={t('manage.name')}
-                value={name}
-                onChange={setName}
+                label={t('login.firstName')}
+                value={firstName}
+                onChange={setFirstName}
+                colors={colors}
+              />
+              <LabeledInput
+                label={t('login.lastName')}
+                value={lastName}
+                onChange={setLastName}
                 colors={colors}
               />
               <Seg

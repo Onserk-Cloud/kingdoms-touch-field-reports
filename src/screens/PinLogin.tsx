@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
-import { LogoMark } from '../components/LogoMark';
+import { FullLogo } from '../components/LogoMark';
 import { useTheme } from '../theme-context';
 import {
   getRemember,
@@ -205,47 +205,38 @@ export function PinLogin() {
         style={{
           position: 'absolute',
           inset: 0,
-          padding: '70px 28px 30px',
+          padding: '52px 28px 30px',
           display: 'flex',
           flexDirection: 'column',
         }}
         className="kt-safe-top"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <LogoMark size={32} variant="gold" />
-          <div style={{ lineHeight: 1.1 }}>
-            <div
-              style={{
-                fontSize: 10.5,
-                fontWeight: 700,
-                color: colors.forest,
-                letterSpacing: 1.6,
-              }}
-            >
-              KINGDOMS TOUCH
-            </div>
-            <div
-              style={{
-                fontSize: 9,
-                fontWeight: 600,
-                color: colors.muted,
-                letterSpacing: 1.2,
-              }}
-            >
-              {t('login.eyebrow')}
-            </div>
+        {/* Centered brand hero */}
+        <div style={{ textAlign: 'center' }}>
+          <FullLogo variant="color" width={208} />
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: colors.goldDeep,
+              letterSpacing: 2.6,
+              textTransform: 'uppercase',
+              marginTop: 14,
+            }}
+          >
+            {t('login.eyebrow')}
           </div>
         </div>
 
-        <div style={{ marginTop: 'auto' }}>
+        <div style={{ marginTop: 'auto', textAlign: 'center' }}>
           <div
             style={{
               fontFamily: 'Cinzel, Georgia, serif',
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: 500,
               color: colors.charcoal,
-              letterSpacing: -0.6,
-              lineHeight: 1.05,
+              letterSpacing: -0.4,
+              lineHeight: 1.1,
             }}
           >
             {title}

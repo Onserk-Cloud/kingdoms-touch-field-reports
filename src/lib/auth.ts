@@ -294,7 +294,9 @@ export async function signInWithEmail(
 export async function signOut(): Promise<void> {
   if (HAS_SUPABASE) {
     try {
-      await getSupabase().auth.signOut();
+      // 'local' only — global revoke 403s on PIN-minted sessions and isn't
+      // needed (we just want to drop this device's session).
+      await getSupabase().auth.signOut({ scope: 'local' });
     } catch {
       /* ignore */
     }
