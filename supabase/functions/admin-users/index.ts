@@ -15,8 +15,9 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 // @ts-expect-error Deno deps
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-// @ts-expect-error Deno deps
-import * as bcrypt from 'https://esm.sh/bcryptjs@2.4.3';
+// @ts-expect-error Deno deps — bcryptjs is CommonJS; its functions live on the
+// default export, so `import * as bcrypt` would make `bcrypt.hash` undefined.
+import bcrypt from 'https://esm.sh/bcryptjs@2.4.3';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
