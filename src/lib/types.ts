@@ -80,6 +80,20 @@ export interface OfflinePhoto {
   createdAt: number;
 }
 
+export type NotificationType = 'new_report' | 'reviewed' | 'needs_update';
+
+/** A notification row — mirrors the Supabase `notifications` table. */
+export interface OfflineNotification {
+  id: string;
+  recipientId: string;
+  type: NotificationType | string;
+  reportId: string | null;
+  refLabel?: string | null;
+  note?: string | null;
+  read: boolean;
+  createdAt: number;
+}
+
 /** A view-model used in lists / cards. */
 export interface ReportView {
   id: string;

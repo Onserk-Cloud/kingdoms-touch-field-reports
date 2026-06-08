@@ -1,4 +1,5 @@
 import { HAS_SUPABASE, getSupabase } from './supabase';
+import { notifyNewReport } from './notifications';
 import type { OfflinePhoto, OfflineReport } from './types';
 
 /**
@@ -13,8 +14,9 @@ export async function uploadReport(
   photos: OfflinePhoto[],
 ): Promise<string> {
   if (!HAS_SUPABASE) {
-    // Demo mode — pretend it worked, return a fake remote id.
+    // Demo mode — pretend it worked, notify staff, return a fake remote id.
     await new Promise((r) => setTimeout(r, 400));
+    await notifyNewReport({ id: report.id, jobType: report.jobType });
     return 'demo-' + report.id;
   }
 

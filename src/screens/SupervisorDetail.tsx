@@ -13,6 +13,7 @@ import { exportReportPdf } from '../lib/pdf';
 import { formatDateTime, formatGps, initialsOf } from '../lib/format';
 import { useSessionStore } from '../store/session';
 import { ktStore } from '../lib/offline-store';
+import { notifyReview } from '../lib/notifications';
 import { getDemoEmployee } from '../lib/auth';
 import type { OfflinePhoto, OfflineReport } from '../lib/types';
 
@@ -151,6 +152,10 @@ export function SupervisorDetail() {
       } else {
         // Demo mode: persist the reviewed status so the employee sees it too.
         await ktStore.setStatus(row.id, 'reviewed');
+        await notifyReview(
+          { id: row.id, employeeId: row.employee.id, jobType: row.job_type },
+          'reviewed',
+        );
       }
       navigate('/supervisor');
     } finally {
@@ -180,6 +185,11 @@ export function SupervisorDetail() {
           status: 'needs_update',
           reviewNote: note || undefined,
         });
+        await notifyReview(
+          { id: row.id, employeeId: row.employee.id, jobType: row.job_type },
+          'needs_update',
+          note,
+        );
       }
       navigate('/supervisor');
     } finally {

@@ -8,6 +8,7 @@ import { useTheme } from '../theme-context';
 import { useI18n } from '../lib/i18n';
 import { HAS_SUPABASE, getSupabase } from '../lib/supabase';
 import { ktStore } from '../lib/offline-store';
+import { notifyNewReport } from '../lib/notifications';
 
 /**
  * Employee edit + resubmit flow. Opens a report flagged "needs_update",
@@ -88,6 +89,7 @@ export function EditReport() {
           status: 'submitted',
           reviewNote: undefined,
         });
+        await notifyNewReport({ id, jobType });
       }
       navigate('/my-reports');
     } finally {

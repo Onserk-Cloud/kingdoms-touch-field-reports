@@ -6,10 +6,10 @@
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
-import type { OfflinePhoto, OfflineReport } from './types';
+import type { OfflineNotification, OfflinePhoto, OfflineReport } from './types';
 
 const DB_NAME = 'kt-reports';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -29,6 +29,11 @@ function db() {
         }
         if (!d.objectStoreNames.contains('meta')) {
           d.createObjectStore('meta', { keyPath: 'key' });
+        }
+        if (!d.objectStoreNames.contains('notifications')) {
+          const s = d.createObjectStore('notifications', { keyPath: 'id' });
+          s.createIndex('recipientId', 'recipientId');
+          s.createIndex('createdAt', 'createdAt');
         }
       },
     });
@@ -128,6 +133,61 @@ export const ktStore = {
     const r = (await d.get('reports', id)) as OfflineReport | undefined;
     if (!r) return;
     await d.put('reports', { ...r, ...patch });
+  },
+
+  /* ── Notifications (demo mode) ─────────────────────────────── */
+
+  async addNotification(
+    n: Omit<OfflineNotification, 'id' | 'read' | 'createdAt'>,
+  ): Promise<string> {
+    const d = await db();
+    const id = uuid();
+    const rec: OfflineNotification = {
+      id,
+      recipientId: n.recipientId,
+      type: n.type,
+      reportId: n.reportId ?? null,
+      refLabel: n.refLabel ?? null,
+      note: n.note ?? null,
+      read: false,
+      createdAt: Date.now(),
+    };
+    await d.put('notifications', rec);
+    return id;
+  },
+
+  async listNotifications(recipientId: string): Promise<OfflineNotification[]> {
+    const d = await db();
+    const all = (await d.getAll('notifications')) as OfflineNotification[];
+    return all
+      .filter((n) => n.recipientId === recipientId)
+      .sort((a, b) => b.createdAt - a.createdAt);
+  },
+
+  async unreadCount(recipientId: string): Promise<number> {
+    const list = await this.listNotifications(recipientId);
+    return list.filter((n) => !n.read).length;
+  },
+
+  async markNotificationRead(id: string): Promise<void> {
+    const d = await db();
+    const n = (await d.get('notifications', id)) as
+      | OfflineNotification
+      | undefined;
+    if (!n) return;
+    await d.put('notifications', { ...n, read: true });
+  },
+
+  async markAllNotificationsRead(recipientId: string): Promise<void> {
+    const d = await db();
+    const all = (await d.getAll('notifications')) as OfflineNotification[];
+    const tx = d.transaction('notifications', 'readwrite');
+    for (const n of all) {
+      if (n.recipientId === recipientId && !n.read) {
+        await tx.store.put({ ...n, read: true });
+      }
+    }
+    await tx.done;
   },
 
   /** All reports for a given employee, newest first. */

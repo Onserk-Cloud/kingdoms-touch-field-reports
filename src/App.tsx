@@ -15,6 +15,7 @@ import { Supervisor } from './screens/Supervisor';
 import { SupervisorDetail } from './screens/SupervisorDetail';
 import { EditReport } from './screens/EditReport';
 import { ManageTeam } from './screens/ManageTeam';
+import { Notifications } from './screens/Notifications';
 import { Profile } from './screens/Profile';
 
 export function App() {
@@ -83,6 +84,14 @@ export function App() {
         element={
           <RequireAuth>
             <Profile />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <RequireAuth>
+            <Notifications />
           </RequireAuth>
         }
       />

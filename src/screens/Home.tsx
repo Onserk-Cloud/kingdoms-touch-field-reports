@@ -6,6 +6,7 @@ import { BellIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { useSessionStore } from '../store/session';
 import { ktStore } from '../lib/offline-store';
+import { useUnreadCount } from '../lib/notifications';
 import { formatDateLong } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 
@@ -14,6 +15,7 @@ export function Home() {
   const { colors } = useTheme();
   const navigate = useNavigate();
   const employee = useSessionStore((s) => s.employee);
+  const unread = useUnreadCount();
   const [online, setOnline] = useState(navigator.onLine);
   const [counts, setCounts] = useState({
     today: 0,
@@ -122,7 +124,7 @@ export function Home() {
             </span>
           </div>
           <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/notifications')}
             aria-label={t('home.notifications')}
             style={{
               width: 40,
@@ -137,19 +139,28 @@ export function Home() {
             className="kt-tap"
           >
             <BellIcon color="#fff" size={18} />
-            {counts.pending > 0 && (
+            {unread > 0 && (
               <span
                 style={{
                   position: 'absolute',
-                  top: 8,
-                  right: 9,
-                  width: 8,
-                  height: 8,
+                  top: 2,
+                  right: 2,
+                  minWidth: 16,
+                  height: 16,
+                  padding: '0 4px',
                   borderRadius: 999,
                   background: colors.gold,
+                  color: colors.forest,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   border: `1.5px solid ${colors.forest}`,
                 }}
-              />
+              >
+                {unread > 9 ? '9+' : unread}
+              </span>
             )}
           </button>
         </div>

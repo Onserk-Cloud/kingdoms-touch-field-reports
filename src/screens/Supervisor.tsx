@@ -8,6 +8,7 @@ import { BellIcon, ClockIcon, PhotoIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { HAS_SUPABASE, getSupabase } from '../lib/supabase';
 import { ktStore } from '../lib/offline-store';
+import { useUnreadCount } from '../lib/notifications';
 import { getDemoEmployee } from '../lib/auth';
 import { formatDate, formatTime, initialsOf } from '../lib/format';
 import { useI18n } from '../lib/i18n';
@@ -29,6 +30,7 @@ export function Supervisor() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const unread = useUnreadCount();
   const [rows, setRows] = useState<CombinedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<
@@ -173,7 +175,7 @@ export function Supervisor() {
             </div>
           </div>
           <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/notifications')}
             aria-label={t('supervisor.notifications')}
             className="kt-tap"
             style={{
@@ -188,19 +190,28 @@ export function Supervisor() {
             }}
           >
             <BellIcon color={colors.charcoal} size={18} />
-            {counts.pending > 0 && (
+            {unread > 0 && (
               <span
                 style={{
                   position: 'absolute',
-                  top: 7,
-                  right: 8,
-                  width: 8,
-                  height: 8,
+                  top: 1,
+                  right: 1,
+                  minWidth: 16,
+                  height: 16,
+                  padding: '0 4px',
                   borderRadius: 999,
                   background: '#E74E3C',
+                  color: '#fff',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   border: '1.5px solid #fff',
                 }}
-              />
+              >
+                {unread > 9 ? '9+' : unread}
+              </span>
             )}
           </button>
         </div>
