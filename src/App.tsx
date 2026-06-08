@@ -1,22 +1,56 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { RequireAuth } from './routes/RequireAuth';
 import { useSessionStore } from './store/session';
 
+// Entry-path screens load eagerly (fast first paint); the rest are
+// code-split so the login bundle stays small.
 import { PinLogin } from './screens/PinLogin';
 import { Splash } from './screens/Splash';
-import { Home } from './screens/Home';
-import { NewReport } from './screens/NewReport';
-import { Camera } from './screens/Camera';
-import { Review } from './screens/Review';
-import { Success } from './screens/Success';
-import { MyReports } from './screens/MyReports';
-import { Supervisor } from './screens/Supervisor';
-import { SupervisorDetail } from './screens/SupervisorDetail';
-import { EditReport } from './screens/EditReport';
-import { ManageTeam } from './screens/ManageTeam';
-import { Notifications } from './screens/Notifications';
-import { Profile } from './screens/Profile';
+
+const Home = lazy(() =>
+  import('./screens/Home').then((m) => ({ default: m.Home })),
+);
+const NewReport = lazy(() =>
+  import('./screens/NewReport').then((m) => ({ default: m.NewReport })),
+);
+const Camera = lazy(() =>
+  import('./screens/Camera').then((m) => ({ default: m.Camera })),
+);
+const Review = lazy(() =>
+  import('./screens/Review').then((m) => ({ default: m.Review })),
+);
+const Success = lazy(() =>
+  import('./screens/Success').then((m) => ({ default: m.Success })),
+);
+const MyReports = lazy(() =>
+  import('./screens/MyReports').then((m) => ({ default: m.MyReports })),
+);
+const Supervisor = lazy(() =>
+  import('./screens/Supervisor').then((m) => ({ default: m.Supervisor })),
+);
+const SupervisorDetail = lazy(() =>
+  import('./screens/SupervisorDetail').then((m) => ({
+    default: m.SupervisorDetail,
+  })),
+);
+const EditReport = lazy(() =>
+  import('./screens/EditReport').then((m) => ({ default: m.EditReport })),
+);
+const ManageTeam = lazy(() =>
+  import('./screens/ManageTeam').then((m) => ({ default: m.ManageTeam })),
+);
+const Notifications = lazy(() =>
+  import('./screens/Notifications').then((m) => ({ default: m.Notifications })),
+);
+const Profile = lazy(() =>
+  import('./screens/Profile').then((m) => ({ default: m.Profile })),
+);
+
+/** Brief neutral screen shown while a route chunk loads. */
+function RouteFallback() {
+  return <div style={{ position: 'fixed', inset: 0, background: '#F7F3E8' }} />;
+}
 
 export function App() {
   const hydrate = useSessionStore((s) => s.hydrate);
@@ -26,122 +60,124 @@ export function App() {
   }, [hydrate]);
 
   return (
-    <Routes>
-      <Route path="/" element={<EntryPoint />} />
-      <Route path="/login" element={<PinLogin />} />
-      <Route path="/splash" element={<Splash />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/" element={<EntryPoint />} />
+        <Route path="/login" element={<PinLogin />} />
+        <Route path="/splash" element={<Splash />} />
 
-      <Route
-        path="/home"
-        element={
-          <RequireAuth>
-            <Home />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/new-report"
-        element={
-          <RequireAuth>
-            <NewReport />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/camera"
-        element={
-          <RequireAuth>
-            <Camera />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/review"
-        element={
-          <RequireAuth>
-            <Review />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/success/:id"
-        element={
-          <RequireAuth>
-            <Success />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/my-reports"
-        element={
-          <RequireAuth>
-            <MyReports />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <RequireAuth>
-            <Profile />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/notifications"
-        element={
-          <RequireAuth>
-            <Notifications />
-          </RequireAuth>
-        }
-      />
+        <Route
+          path="/home"
+          element={
+            <RequireAuth>
+              <Home />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/new-report"
+          element={
+            <RequireAuth>
+              <NewReport />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/camera"
+          element={
+            <RequireAuth>
+              <Camera />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/review"
+          element={
+            <RequireAuth>
+              <Review />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/success/:id"
+          element={
+            <RequireAuth>
+              <Success />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/my-reports"
+          element={
+            <RequireAuth>
+              <MyReports />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <RequireAuth>
+              <Notifications />
+            </RequireAuth>
+          }
+        />
 
-      <Route
-        path="/report/:id"
-        element={
-          <RequireAuth>
-            <SupervisorDetail />
-          </RequireAuth>
-        }
-      />
+        <Route
+          path="/report/:id"
+          element={
+            <RequireAuth>
+              <SupervisorDetail />
+            </RequireAuth>
+          }
+        />
 
-      <Route
-        path="/report/:id/edit"
-        element={
-          <RequireAuth>
-            <EditReport />
-          </RequireAuth>
-        }
-      />
+        <Route
+          path="/report/:id/edit"
+          element={
+            <RequireAuth>
+              <EditReport />
+            </RequireAuth>
+          }
+        />
 
-      <Route
-        path="/manage"
-        element={
-          <RequireAuth roles={['admin', 'super_admin']}>
-            <ManageTeam />
-          </RequireAuth>
-        }
-      />
+        <Route
+          path="/manage"
+          element={
+            <RequireAuth roles={['admin', 'super_admin']}>
+              <ManageTeam />
+            </RequireAuth>
+          }
+        />
 
-      <Route
-        path="/supervisor"
-        element={
-          <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
-            <Supervisor />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/supervisor/report/:id"
-        element={
-          <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
-            <SupervisorDetail />
-          </RequireAuth>
-        }
-      />
+        <Route
+          path="/supervisor"
+          element={
+            <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
+              <Supervisor />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/supervisor/report/:id"
+          element={
+            <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
+              <SupervisorDetail />
+            </RequireAuth>
+          }
+        />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

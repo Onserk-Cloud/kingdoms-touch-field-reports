@@ -26,6 +26,10 @@ export interface KtColors {
   line: string;
   lineStrong: string;
   muted: string;
+  /** Destructive / warning accent (reused across reset, sign-out, needs-update). */
+  danger: string;
+  dangerSoft: string;
+  dangerLine: string;
 }
 
 /** Forest & Gold — premium nature-services palette (default) */
@@ -35,7 +39,8 @@ export const FOREST_GOLD: KtColors = {
   forestSoft: '#2A5238',
   gold: '#C4984C',
   goldSoft: '#E0C079',
-  goldDeep: '#9C7228',
+  // Darkened from #9C7228 to meet WCAG AA (4.5:1) for small label text on ivory.
+  goldDeep: '#8A6420',
   charcoal: '#1A1A1A',
   ink: '#2A2620',
   ivory: '#F7F3E8',
@@ -45,6 +50,9 @@ export const FOREST_GOLD: KtColors = {
   line: 'rgba(31,61,43,0.12)',
   lineStrong: 'rgba(31,61,43,0.18)',
   muted: '#6B6358',
+  danger: '#A04A2E',
+  dangerSoft: 'rgba(160,74,46,0.12)',
+  dangerLine: 'rgba(160,74,46,0.28)',
 };
 
 export const THEMES: Record<ThemeName, KtColors> = {

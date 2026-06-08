@@ -35,6 +35,19 @@ export function PhotoTile({
     <div
       onClick={onClick}
       className={onClick ? 'kt-tap' : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? (label ?? 'Photo') : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       style={{
         width,
         height,

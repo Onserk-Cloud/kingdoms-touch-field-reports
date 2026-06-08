@@ -36,7 +36,9 @@ if (!rootEl) throw new Error('Missing #root');
 
 createRoot(rootEl).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <I18nProvider>
         <ThemeProvider>
           <App />

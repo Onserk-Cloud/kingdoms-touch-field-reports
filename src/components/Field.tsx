@@ -66,6 +66,7 @@ export function Field({
         {multi ? (
           <textarea
             className="kt-input"
+            aria-label={label}
             value={value}
             placeholder={placeholder}
             onChange={handleChange}
@@ -75,6 +76,7 @@ export function Field({
         ) : (
           <input
             className="kt-input"
+            aria-label={label}
             type={type}
             value={value}
             placeholder={placeholder}

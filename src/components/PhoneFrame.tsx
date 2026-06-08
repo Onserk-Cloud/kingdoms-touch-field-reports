@@ -80,7 +80,11 @@ export function PhoneFrame({ children, dark = false, bg }: PhoneFrameProps) {
 }
 
 function useIsMobile(threshold = 480) {
-  const [m, setM] = useState(false);
+  // Initialise from the real viewport on the FIRST render so we never paint the
+  // desktop artboard and then swap to mobile (which caused a huge layout shift).
+  const [m, setM] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth <= threshold,
+  );
   useEffect(() => {
     const check = () => setM(window.innerWidth <= threshold);
     check();
