@@ -13,6 +13,13 @@ const dict: NsDict = {
     viewMyReports: 'View My Reports',
     resetDemo: 'Reset Demo Data',
     signOut: 'Sign Out',
+    installApp: 'Install app',
+    installSub: 'Add to your home screen for one-tap access, offline.',
+    installInstalled: 'App installed ✓',
+    installIosHint:
+      'In Safari: tap the Share button, then “Add to Home Screen”.',
+    installHintOther:
+      'Open your browser menu (⋮) and choose “Install app” / “Add to Home screen”.',
   },
   es: {
     title: 'Perfil',
@@ -26,6 +33,14 @@ const dict: NsDict = {
     viewMyReports: 'Ver mis reportes',
     resetDemo: 'Reiniciar datos demo',
     signOut: 'Cerrar sesión',
+    installApp: 'Instalar app',
+    installSub:
+      'Agrégala a tu pantalla de inicio para entrar con un toque, sin conexión.',
+    installInstalled: 'App instalada ✓',
+    installIosHint:
+      'En Safari: toca el botón Compartir y luego “Agregar a inicio”.',
+    installHintOther:
+      'Abre el menú del navegador (⋮) y elige “Instalar app” / “Agregar a pantalla de inicio”.',
   },
 };
 

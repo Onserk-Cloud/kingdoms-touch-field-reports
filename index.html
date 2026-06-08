@@ -19,6 +19,23 @@
     />
     <title>Kingdoms Touch Services · Field Reports</title>
 
+    <!-- Capture the install prompt as early as possible so an in-app
+         "Install app" button can trigger it later. -->
+    <script>
+      (function () {
+        window.__ktInstall = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+          e.preventDefault();
+          window.__ktInstall = e;
+          window.dispatchEvent(new Event('kt-installable'));
+        });
+        window.addEventListener('appinstalled', function () {
+          window.__ktInstall = null;
+          window.dispatchEvent(new Event('kt-installed'));
+        });
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Preload the login logo (LCP element) -->
