@@ -4,13 +4,14 @@
 -- Run AFTER 0001..0003. Safe to re-run (idempotent).
 --
 -- A 4-digit PIN on a public endpoint is only ~10,000 combinations, so the
--- login-with-pin Edge Function counts failed attempts per identity and per IP
--- and locks out after too many. Only the service role (the function) touches
--- this table; RLS is on with no policies so clients can never read/write it.
+-- login-with-pin Edge Function counts failed attempts per identity and locks
+-- the identity for a short window after 3 wrong tries (then auto-recovers).
+-- Only the service role (the function) touches this table; RLS is on with no
+-- policies so clients can never read/write it.
 -- ─────────────────────────────────────────────────────────────
 
 create table if not exists public.login_attempts (
-  subject       text primary key, -- 'emp:<id>' | 'name:<norm>' | 'ip:<addr>'
+  subject       text primary key, -- 'emp:<id>' | 'name:<norm>'
   fail_count    int not null default 0,
   locked_until  timestamptz,
   updated_at    timestamptz not null default now()

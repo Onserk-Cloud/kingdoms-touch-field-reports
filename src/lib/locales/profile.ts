@@ -3,10 +3,6 @@ import type { NsDict } from './types';
 const dict: NsDict = {
   en: {
     title: 'Profile',
-    theme: 'Theme',
-    themeForest: 'Forest & Gold',
-    themeBlue: 'Blue & Orange',
-    themeBlack: 'Black & Gold',
     language: 'Language',
     goToSupervisor: 'Go to Supervisor Dashboard',
     manageTeam: 'Manage team',
@@ -23,10 +19,6 @@ const dict: NsDict = {
   },
   es: {
     title: 'Perfil',
-    theme: 'Tema',
-    themeForest: 'Bosque y Oro',
-    themeBlue: 'Azul y Naranja',
-    themeBlack: 'Negro y Oro',
     language: 'Idioma',
     goToSupervisor: 'Ir al panel de supervisor',
     manageTeam: 'Gestionar equipo',

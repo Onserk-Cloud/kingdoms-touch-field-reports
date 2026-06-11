@@ -1,7 +1,7 @@
 {
   "name": "kingdom-touch",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.4.0",
   "type": "module",
   "description": "Kingdoms Touch Services · Field Reports PWA",
   "scripts": {

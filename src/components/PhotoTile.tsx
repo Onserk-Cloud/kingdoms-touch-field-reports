@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useTheme } from '../theme-context';
+import { useI18n } from '../lib/i18n';
 
 interface PhotoTileProps {
   label?: string;
@@ -27,6 +28,7 @@ export function PhotoTile({
   style,
 }: PhotoTileProps) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const stripe = dark
     ? 'repeating-linear-gradient(45deg, #2A5238 0 8px, #1F3D2B 8px 16px)'
     : 'repeating-linear-gradient(45deg, #EDE7D5 0 8px, #E3DCC4 8px 16px)';
@@ -37,7 +39,7 @@ export function PhotoTile({
       className={onClick ? 'kt-tap' : undefined}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      aria-label={onClick ? (label ?? 'Photo') : undefined}
+      aria-label={onClick ? (label ?? t('common.photo')) : undefined}
       onKeyDown={
         onClick
           ? (e) => {
@@ -83,7 +85,7 @@ export function PhotoTile({
             e.stopPropagation();
             onRemove();
           }}
-          aria-label="Remove photo"
+          aria-label={t('common.removePhoto')}
           style={{
             position: 'absolute',
             top: 4,

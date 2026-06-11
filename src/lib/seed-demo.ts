@@ -10,7 +10,10 @@
 import { ktStore } from './offline-store';
 import type { OfflineReport } from './types';
 
-const SEED_FLAG = 'kt:demo-seeded:v2';
+// Bumped to v3: the previous seed aborted with a VersionError, so any device
+// that ran it has partial/empty data. v3 forces a clean re-seed of the fixed
+// catalogue.
+const SEED_FLAG = 'kt:demo-seeded:v3';
 
 interface SeedReport {
   /** Offset from now in hours (negative = past). */
@@ -21,6 +24,8 @@ interface SeedReport {
   description: string;
   notes?: string;
   status: OfflineReport['status'];
+  /** Reviewer note shown to the employee on a "changes requested" report. */
+  reviewNote?: string;
   gps?: { lat: number; lng: number; accuracy: number };
   /** Number of mock photos to attach. */
   photos: number;
@@ -213,7 +218,7 @@ const SEED: SeedReport[] = [
     palette: 'dusk',
   },
 
-  // An error / needs-update one
+  // A "changes requested" one — exercises the review → resubmit flow end-to-end.
   {
     hoursAgo: 50,
     employeeId: 'demo-emp-1',
@@ -221,8 +226,8 @@ const SEED: SeedReport[] = [
     location: 'Reunion Resort #214',
     description:
       'Patched two hairline cracks with concrete filler. Will re-seal next visit.',
-    notes: 'Supervisor requested before/after photos.',
-    status: 'error',
+    reviewNote: 'Supervisor requested before/after photos.',
+    status: 'needs_update',
     photos: 1,
     palette: 'rust',
   },
@@ -231,6 +236,11 @@ const SEED: SeedReport[] = [
 export async function seedDemoData(force = false): Promise<void> {
   if (typeof window === 'undefined') return;
   if (!force && window.localStorage.getItem(SEED_FLAG) === '1') return;
+
+  // Start from a clean slate so a re-seed (flag bump, or a prior partial run)
+  // never leaves orphaned reports behind. Safe: this only runs on the one-time
+  // seed (the flag short-circuits returning devices) or an explicit reset.
+  await ktStore.clear();
 
   const now = Date.now();
   for (const s of SEED) {
@@ -244,21 +254,18 @@ export async function seedDemoData(force = false): Promise<void> {
       completionConfirmed: s.status !== 'draft',
     });
 
-    // Override createdAt + status post-save.
-    const r = await ktStore.getReport(id);
-    if (r) {
-      r.createdAt = now - s.hoursAgo * 60 * 60 * 1000;
-      r.status = s.status;
-      // Stamp a fake remote id for "submitted" ones so they look real.
-      if (s.status === 'submitted' || s.status === 'pending') {
-        r.remoteId = `demo-${id.slice(0, 8)}`;
-      }
-      // Direct write via the same idb instance:
-      // We use saveDraft then a second pass.
-      const dbMod = await import('idb');
-      const db = await dbMod.openDB('kt-reports', 1);
-      await db.put('reports', r);
+    // Override createdAt + status post-save, reusing the store's v2 connection
+    // (a hard-coded openDB(..., 1) here threw a VersionError and aborted the seed).
+    const patch: Partial<OfflineReport> = {
+      createdAt: now - s.hoursAgo * 60 * 60 * 1000,
+      status: s.status,
+    };
+    // Stamp a fake remote id for "submitted" ones so they look real.
+    if (s.status === 'submitted' || s.status === 'pending') {
+      patch.remoteId = `demo-${id.slice(0, 8)}`;
     }
+    if (s.reviewNote) patch.reviewNote = s.reviewNote;
+    await ktStore.updateReport(id, patch);
 
     // Generate mock photos.
     for (let i = 0; i < s.photos; i++) {

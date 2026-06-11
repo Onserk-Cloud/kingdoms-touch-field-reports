@@ -5,7 +5,8 @@ const dict: NsDict = {
     title: 'Enter your PIN',
     subtitle: '4-digit code from your supervisor.',
     signingIn: 'Signing in…',
-    demoHint: 'Demo · Jonathan Reyes / Maria López · PIN 1234 / 5678',
+    demoHint:
+      'Demo · Employees PIN 1234 / 5678 / 4321 · Supervisor: Sandra Ruiz, PIN 0000',
     loginFailed: 'Login failed',
     rememberDevice: 'Remember me on this device',
     clear: 'CLEAR',
@@ -31,7 +32,7 @@ const dict: NsDict = {
     editName: 'Edit name',
     errInvalid: 'Wrong name or PIN. Check your name and try again.',
     errLocked:
-      'Too many attempts. Your account is locked — contact your admin.',
+      'Too many attempts. Wait a few minutes and try again, or contact your admin.',
     errDuplicate: 'Two people share that name and PIN. Contact your admin.',
     errServer: "Couldn't sign in. Please try again in a moment.",
   },
@@ -40,7 +41,8 @@ const dict: NsDict = {
     title: 'Ingresa tu PIN',
     subtitle: 'Código de 4 dígitos de tu supervisor.',
     signingIn: 'Entrando…',
-    demoHint: 'Demo · Jonathan Reyes / Maria López · PIN 1234 / 5678',
+    demoHint:
+      'Demo · Empleados PIN 1234 / 5678 / 4321 · Supervisor: Sandra Ruiz, PIN 0000',
     loginFailed: 'Error al entrar',
     rememberDevice: 'Recordarme en este dispositivo',
     clear: 'BORRAR',
@@ -67,7 +69,7 @@ const dict: NsDict = {
     errInvalid:
       'Nombre o PIN incorrecto. Revisa tu nombre e inténtalo de nuevo.',
     errLocked:
-      'Demasiados intentos. Tu cuenta está bloqueada — contacta a tu admin.',
+      'Demasiados intentos. Espera unos minutos e inténtalo de nuevo, o contacta a tu admin.',
     errDuplicate: 'Dos personas tienen ese nombre y PIN. Contacta a tu admin.',
     errServer: 'No se pudo entrar. Inténtalo de nuevo en un momento.',
   },

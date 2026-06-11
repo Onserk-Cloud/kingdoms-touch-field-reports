@@ -3,16 +3,21 @@
 PWA offline-first para reportes de campo de **Kingdoms Touch Services**
 (Florida). Vite + React + TypeScript + Supabase, lista para producción.
 
-- 10 pantallas migradas 1:1 del prototipo (paleta Forest & Gold, tipografías
-  Manrope + Fraunces, micro-interacciones suaves).
-- Login por PIN de 4 dígitos (sin email), con bcrypt en una Edge Function de
-  Supabase y JWT real.
+- Pantallas premium con la marca oficial (paleta **Forest & Gold**,
+  tipografías **Manrope + Cinzel + Cormorant Garamond**, micro-interacciones
+  suaves) e **i18n ES/EN** completo.
+- **Empleados** entran con **PIN de 4 dígitos** (identidad por nombre +
+  dispositivo recordado); **staff** (supervisor/admin/super_admin) entra con
+  **correo + contraseña**. bcrypt en Edge Functions de Supabase con JWT real.
+- **4 roles** (employee, supervisor, admin, super_admin) con RLS por rol, panel
+  de **gestión de equipo** y **flujo de revisión** (aprobar / pedir cambios →
+  el empleado edita y reenvía) + **notificaciones in-app**.
 - Cámara nativa, GPS de alta precisión, compresión de fotos a 1920px.
 - Cola offline en IndexedDB con auto-flush al recuperar conexión.
-- PDF export en el panel del supervisor (jsPDF).
-- 3 temas intercambiables: **Forest & Gold**, **Blue & Orange**,
-  **Black & Gold**.
-- Despliegue automatizado a Netlify vía GitHub Actions.
+- PDF export en el panel del supervisor (jsPDF), bilingüe.
+- Paleta de marca única **Forest & Gold** (la app está fijada a este tema).
+- Despliegue por la integración nativa de Netlify (CI en GitHub Actions corre
+  type-check + lint + build).
 
 ---
 
@@ -21,22 +26,23 @@ PWA offline-first para reportes de campo de **Kingdoms Touch Services**
 ```
 kingdom-touch/
 ├── src/
-│   ├── theme.ts                  # 3 paletas + tokens tipográficos
+│   ├── theme.ts                  # Paleta Forest & Gold + tokens tipográficos
 │   ├── theme-context.tsx         # Provider + hook useTheme()
 │   ├── index.css                 # Reset + utilidades globales
 │   ├── main.tsx, App.tsx
 │   ├── components/               # Button, Card, Field, PhoneFrame,
 │   │                             # Badge, AppBar, TabBar, PhotoTile, Icons
-│   ├── screens/                  # Las 10 pantallas tipadas
-│   ├── routes/RequireAuth.tsx    # Guard de empleado/supervisor
+│   ├── screens/                  # Pantallas tipadas (login, reportes,
+│   │                             # supervisor, gestión de equipo, perfil…)
+│   ├── routes/RequireAuth.tsx    # Guard por rol
 │   ├── store/                    # Zustand: session, draft
-│   └── lib/                      # supabase, auth, offline-store,
-│                                 # uploader, compress, geo, pdf, format
-├── public/icons/                 # Iconos PWA del prototipo
+│   └── lib/                      # supabase, auth, offline-store, uploader,
+│                                 # compress, geo, pdf, format, i18n, locales/
+├── public/                       # Iconos PWA + branding oficial
 ├── supabase/
-│   ├── migrations/0001_init.sql  # Tablas, RLS, bucket, seed
-│   └── functions/login-with-pin/ # Edge Function bcrypt
-├── .github/workflows/deploy.yml  # CI + deploy a Netlify
+│   ├── migrations/               # 0001_init … 0006_report_update_check (6)
+│   └── functions/                # login-with-pin + admin-users (Edge, bcrypt)
+├── .github/workflows/deploy.yml  # CI (type-check + lint + build)
 ├── netlify.toml                  # SPA redirects + headers
 ├── vite.config.ts                # vite-plugin-pwa configurado
 └── .env.example
@@ -98,24 +104,35 @@ npm install
 
 ## 3. Aplicar las migrations
 
-Tienes dos rutas:
+> Hay **6 migraciones**. Aplícalas **en orden** — cada una es idempotente
+> (segura de re-ejecutar). Saltarte alguna deja la app sin roles, sin el flujo
+> de revisión, sin notificaciones o sin las protecciones de seguridad.
 
-### Opción A · SQL editor (1 minuto, lo más rápido)
+### Opción A · SQL editor
 
 1. En el dashboard de Supabase, abre **SQL Editor → New query**.
-2. Copia el contenido de `supabase/migrations/0001_init.sql`.
-3. Click **Run**. Verifica que aparecen tres tablas en **Table editor**:
-   `employees`, `reports`, `report_photos`.
+2. Pega y ejecuta el contenido de cada archivo de `supabase/migrations/`, en
+   orden:
+   1. `0001_init.sql` — tablas (`employees`, `reports`, `report_photos`), RLS,
+      bucket `report-photos`, seed.
+   2. `0002_roles.sql` — roles `admin`/`super_admin`, columna `review_note`,
+      RLS por staff (incluye la política UPDATE endurecida con `WITH CHECK`).
+   3. `0003_notifications.sql` — tabla `notifications` + trigger de fan-out.
+   4. `0004_login_throttle.sql` — tabla `login_attempts` (anti fuerza bruta).
+   5. `0005_employee_names.sql` — columnas `first_name` / `last_name`.
+   6. `0006_report_update_check.sql` — refuerza la política UPDATE de `reports`
+      (idempotente; sobre todo útil para proyectos ya provisionados con una
+      versión anterior).
 
 ### Opción B · Supabase CLI (recomendado a largo plazo)
 
 ```bash
 supabase login
 supabase link --project-ref <YOUR-PROJECT-REF>
-supabase db push
+supabase db push   # aplica las 6 migraciones en orden
 ```
 
-> Tras correr la migración tendrás 3 empleados sembrados:
+> Tras correr `0001_init.sql` tendrás 3 empleados sembrados:
 >
 > | Nombre          | PIN  | Rol         |
 > | --------------- | ---- | ----------- |
@@ -123,33 +140,47 @@ supabase db push
 > | Jonathan Reyes  | 1234 | employee    |
 > | Maria López     | 5678 | employee    |
 >
-> **Cambia estos PINs antes de producción.** Para generar un nuevo hash:
+> **Estos PINs son públicos — rótalos antes de producción.** La forma más
+> simple (sin tocar SQL) es desde la app: entra como **supervisor/admin** →
+> **Gestionar equipo** → **Restablecer PIN** para cada empleado sembrado, y
+> agrega ahí a los empleados reales (la Edge Function `admin-users` hashea el
+> PIN por ti). Si prefieres SQL, genera el hash declarando bcryptjs primero:
 >
 > ```bash
-> npm exec -- node -e "console.log(require('bcryptjs').hashSync('NUEVO_PIN', 10))"
+> npm i -D bcryptjs
+> node -e "console.log(require('bcryptjs').hashSync('NUEVO_PIN', 10))"
 > ```
 >
-> Y actualiza la columna `pin_hash` en la tabla `employees`.
+> y actualiza la columna `pin_hash` en la tabla `employees`.
 
 ---
 
-## 4. Desplegar la Edge Function `login-with-pin`
+## 4. Desplegar las Edge Functions
 
-Esta función recibe un PIN, lo compara con bcrypt contra `pin_hash`, y
-devuelve un JWT real de Supabase Auth ligado al empleado.
+Hay **dos** Edge Functions:
+
+- **`login-with-pin`** — recibe un PIN, lo compara con bcrypt contra
+  `pin_hash` y devuelve un JWT real de Supabase Auth ligado al empleado.
+- **`admin-users`** — gestión de equipo (crear empleados/staff, restablecer
+  PIN/contraseña, desbloquear). Verifica el JWT del llamante y su rol.
 
 ```bash
-supabase functions deploy login-with-pin
+supabase functions deploy login-with-pin --no-verify-jwt   # Verify JWT = OFF
+supabase functions deploy admin-users                       # Verify JWT = ON
 ```
 
-Asegúrate de tener en **Project → Settings → Functions** estas variables:
+`login-with-pin` **debe** tener *Verify JWT = OFF* (es la puerta de entrada a
+los JWT; no puede exigir uno). `admin-users` mantiene *Verify JWT = ON*. Ambos
+flags ya están declarados en `supabase/config.toml`.
 
-- `SUPABASE_URL` (auto)
-- `SUPABASE_SERVICE_ROLE_KEY` (auto)
+Asegúrate de tener en **Project → Settings → Functions** estas variables
+(auto-inyectadas por Supabase): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+`SUPABASE_ANON_KEY`. Y en **Authentication → Providers**, el proveedor
+**Email** debe estar **habilitado** (login-with-pin firma sesiones por correo).
 
-> Si prefieres no usar Supabase CLI, puedes pegar el contenido de
-> `supabase/functions/login-with-pin/index.ts` directamente en el editor de
-> Edge Functions del dashboard.
+> Si prefieres no usar la CLI, puedes pegar el contenido de cada
+> `supabase/functions/<nombre>/index.ts` en el editor de Edge Functions del
+> dashboard (recuerda fijar el flag *Verify JWT* de cada una).
 
 ---
 
@@ -250,19 +281,21 @@ hay que reregistrar manualmente.
 
 ---
 
-## 10. Cambiar de tema
+## 10. Tema
 
-El usuario puede cambiar entre los 3 temas en **Profile → Theme** o el
-desarrollador puede fijar el tema por defecto con
-`VITE_DEFAULT_THEME=forest|blue|black`. Los colores son CSS variables
-(`--kt-forest`, `--kt-gold`, etc.) más un objeto JS (`useTheme().colors`)
-para componentes que necesitan los valores en línea.
+La app está **fijada a la paleta oficial de marca Forest & Gold** (no hay
+selector de tema). Los colores son CSS variables (`--kt-forest`, `--kt-gold`,
+etc.) más un objeto JS (`useTheme().colors`) para componentes que necesitan los
+valores en línea. `VITE_DEFAULT_THEME` solo acepta `forest`; cualquier otro
+valor cae a `forest` de forma segura.
 
 ---
 
 ## 11. Calidad
 
-- **TypeScript estricto** en todo el cliente.
+- **TypeScript estricto** en todo `src/` (la app cliente).
+- **18 tests** (Vitest) + verificación de paridad i18n EN/ES
+  (`npx tsx scripts/check-i18n.ts`).
 - **ESLint + Prettier** preconfigurados.
 - **Mobile-first**: probado en iPhone SE (375px) y iPhone 15 Pro Max
   (430px). El `<PhoneFrame>` solo muestra el chrome de iPhone en desktop;

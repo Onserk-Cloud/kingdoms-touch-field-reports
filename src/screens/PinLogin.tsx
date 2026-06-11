@@ -706,7 +706,7 @@ function Keypad({
       <button
         onClick={onBackspace}
         disabled={disabled}
-        aria-label="Backspace"
+        aria-label={t('common.backspace')}
         className="kt-tap"
         style={{
           height: 72,

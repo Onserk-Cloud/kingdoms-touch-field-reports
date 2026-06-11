@@ -7,8 +7,9 @@
  *
  * Brute-force defense: a 4-digit PIN is only ~10,000 combinations on a public
  * endpoint, so failed attempts are counted per identity and the identity is
- * locked after 3 wrong tries until an admin resets the PIN or unlocks it
- * (admin-users functions reset_pin / unlock). Table: public.login_attempts.
+ * locked after 3 wrong tries for a short window (then auto-recovers). An admin
+ * can also reset the PIN or unlock it sooner (admin-users functions reset_pin /
+ * unlock). Table: public.login_attempts.
  *
  * Request body:
  *   { pin, employeeId }  -> returning device (verify PIN for that employee)
@@ -40,8 +41,12 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// 3 wrong tries locks the identity until an admin resets the PIN or unlocks it.
+// 3 wrong tries locks the identity for LOCK_WINDOW_MS, then it auto-recovers.
+// An admin reset/unlock can clear it sooner. This keeps brute-force infeasible
+// (3 tries per window) without a permanent denial-of-service: anyone who knows
+// an employee's name could otherwise lock them out indefinitely.
 const MAX_FAILS = 3;
+const LOCK_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 // Combining diacritical marks (U+0300..U+036F). Built from an ASCII-only
 // string so copy/paste into the dashboard editor can never mangle it.
@@ -254,11 +259,18 @@ serve(async (req: Request) => {
 async function isLocked(admin: any, subject: string): Promise<boolean> {
   const { data } = await admin
     .from('login_attempts')
-    .select('fail_count')
+    .select('fail_count, locked_until')
     .eq('subject', subject)
     .maybeSingle();
-  // Count-based lock: stays locked until an admin clears it (no auto-expiry).
-  return (data?.fail_count ?? 0) >= MAX_FAILS;
+  if (!data) return false;
+  if ((data.fail_count ?? 0) < MAX_FAILS) return false;
+  // Locked only within the window; after it elapses, auto-recover.
+  if (data.locked_until && new Date(data.locked_until).getTime() > Date.now()) {
+    return true;
+  }
+  // Window elapsed — clear the counter so the next attempt starts fresh.
+  await admin.from('login_attempts').delete().eq('subject', subject);
+  return false;
 }
 
 async function recordFail(admin: any, subject: string): Promise<void> {
@@ -271,7 +283,10 @@ async function recordFail(admin: any, subject: string): Promise<void> {
   await admin.from('login_attempts').upsert({
     subject,
     fail_count: fail,
-    locked_until: fail >= MAX_FAILS ? new Date().toISOString() : null,
+    locked_until:
+      fail >= MAX_FAILS
+        ? new Date(Date.now() + LOCK_WINDOW_MS).toISOString()
+        : null,
     updated_at: new Date().toISOString(),
   });
 }

@@ -59,9 +59,12 @@ export const THEMES: Record<ThemeName, KtColors> = {
   forest: FOREST_GOLD,
 };
 
-const DEFAULT_THEME: ThemeName = ((import.meta.env.VITE_DEFAULT_THEME as
-  | ThemeName
-  | undefined) ?? 'forest') as ThemeName;
+// Validate the env value against the registered themes so an unsupported value
+// (e.g. a leftover VITE_DEFAULT_THEME=blue) silently falls back to forest
+// instead of resolving to an undefined palette and blanking the screen.
+const ENV_THEME = import.meta.env.VITE_DEFAULT_THEME as string | undefined;
+const DEFAULT_THEME: ThemeName =
+  ENV_THEME && ENV_THEME in THEMES ? (ENV_THEME as ThemeName) : 'forest';
 
 const STORAGE_KEY = 'kt:theme';
 

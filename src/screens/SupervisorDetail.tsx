@@ -68,7 +68,9 @@ export function SupervisorDetail() {
       // Demo mode: build the detail view from the IndexedDB-seeded report.
       try {
         const r = await ktStore.getReport(id);
-        if (!r) {
+        // Defense-in-depth: an employee may only view their own report.
+        // (Supabase mode is already enforced by RLS.)
+        if (!r || (me?.role === 'employee' && r.employeeId !== me.id)) {
           setRow(null);
           return;
         }
@@ -121,8 +123,14 @@ export function SupervisorDetail() {
           'id, job_type, location, description, notes, gps_lat, gps_lng, gps_accuracy, status, submitted_at, reviewed_at, review_note, completion_confirmed, created_at, employee:employees!employee_id(id, name, initials, avatar_color), photos:report_photos(id, storage_path, caption)',
         )
         .eq('id', id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
+      if (!data) {
+        // 0 rows = not found / not visible to this account (RLS), not a
+        // network error. Show the clean "not found" state, not the retry card.
+        setRow(null);
+        return;
+      }
       setRow(data as unknown as DetailRow);
       if (data?.photos) {
         const urls = await Promise.all(
@@ -1000,7 +1008,7 @@ export function SupervisorDetail() {
           />
           <button
             onClick={() => setLightbox(null)}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="kt-tap"
             style={{
               position: 'absolute',

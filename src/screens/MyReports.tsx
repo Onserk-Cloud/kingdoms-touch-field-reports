@@ -98,6 +98,26 @@ export function MyReports() {
     }
   };
 
+  // Keep the left accent bar in sync with the badge colour.
+  const barColorFor = (s: OfflineReport['status']): string => {
+    switch (badgeFor(s)) {
+      case 'submitted':
+      case 'reviewed':
+        return colors.forest;
+      case 'pending':
+        return colors.gold;
+      case 'flagged':
+        return colors.danger;
+      default:
+        return colors.muted;
+    }
+  };
+
+  // Drafts open the editor so the employee can finish them; everything else
+  // opens the read-only detail.
+  const openReport = (r: OfflineReport) =>
+    navigate(r.status === 'draft' ? `/report/${r.id}/edit` : `/report/${r.id}`);
+
   return (
     <PhoneFrame bg={colors.ivory}>
       <AppBar
@@ -320,14 +340,14 @@ export function MyReports() {
           filtered.map((r) => (
             <div
               key={r.id}
-              onClick={() => navigate(`/report/${r.id}`)}
+              onClick={() => openReport(r)}
               role="button"
               tabIndex={0}
               aria-label={r.jobType || t('myReports.untitled')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  navigate(`/report/${r.id}`);
+                  openReport(r);
                 }
               }}
               className="kt-tap"
@@ -348,12 +368,7 @@ export function MyReports() {
                   width: 3,
                   borderRadius: 2,
                   flexShrink: 0,
-                  background:
-                    r.status === 'submitted'
-                      ? colors.forest
-                      : r.status === 'pending'
-                        ? colors.gold
-                        : colors.sage,
+                  background: barColorFor(r.status),
                 }}
               />
               <div style={{ flex: 1, minWidth: 0 }}>

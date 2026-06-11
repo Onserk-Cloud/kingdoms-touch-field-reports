@@ -10,7 +10,7 @@ import { useDraftStore } from '../store/draft';
 import { useSessionStore } from '../store/session';
 import { ktStore } from '../lib/offline-store';
 import { uploadReport } from '../lib/uploader';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, formatGps } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 
 export function Review() {
@@ -97,6 +97,9 @@ export function Review() {
       // 4. Attempt immediate upload if online.
       let remoteId = localId;
       if (navigator.onLine) {
+        // Claim the report as 'syncing' so a concurrent auto-flush (which only
+        // picks 'pending') can't upload it a second time → no duplicates.
+        await ktStore.setStatus(localId, 'syncing');
         try {
           const report = await ktStore.getReport(localId);
           const photos = await ktStore.listPhotos(localId);
@@ -104,9 +107,12 @@ export function Review() {
             const rid = await uploadReport(report, photos);
             await ktStore.markSubmitted(localId, rid);
             remoteId = rid;
+          } else {
+            await ktStore.setStatus(localId, 'pending');
           }
         } catch (err) {
-          // Stays in queue; will retry when online.
+          // Revert to 'pending' so it stays queued and retries when online.
+          await ktStore.setStatus(localId, 'pending');
           console.warn('[KT] upload deferred', err);
         }
       }
@@ -212,7 +218,7 @@ export function Review() {
               label={t('review.labelGps')}
               value={
                 draft.gps
-                  ? `${draft.gps.lat.toFixed(4)}° N · ${draft.gps.lng.toFixed(4)}° W`
+                  ? formatGps(draft.gps.lat, draft.gps.lng)
                   : t('review.gpsNotCaptured')
               }
               mono

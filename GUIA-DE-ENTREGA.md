@@ -47,8 +47,10 @@ Una vez instalada, abre como app a pantalla completa, con su ícono de corona.
 - **Staff (supervisor/admin/super admin):** en el login tocan **"Entrar como staff"** y usan
   **correo + contraseña**.
 
-> Seguridad: tras **3 intentos** de PIN fallidos la cuenta se **bloquea** hasta que un admin la
-> resetee o desbloquee (evita que adivinen PINs).
+> Seguridad (con el Supabase del cliente): tras **3 intentos** de PIN fallidos la identidad se
+> **bloquea ~15 minutos** y luego se libera sola; un admin también puede **desbloquearla o
+> resetear el PIN** al instante (evita que adivinen PINs). En el **modo demo local** no hay
+> bloqueo: los PINs de prueba son públicos y los datos están sembrados, sin información real.
 
 ---
 
@@ -110,12 +112,15 @@ npx tsx scripts/check-i18n.ts   # verifica paridad ES/EN de textos
 ### Base de datos (SQL en orden, en Supabase → SQL Editor)
 `supabase/migrations/`:
 1. `0001_init.sql` — tablas, RLS, storage, seed
-2. `0002_roles.sql` — roles admin/super_admin + RLS por staff
+2. `0002_roles.sql` — roles admin/super_admin + RLS por staff (UPDATE con `WITH CHECK`)
 3. `0003_notifications.sql` — notificaciones + trigger
 4. `0004_login_throttle.sql` — anti fuerza bruta
 5. `0005_employee_names.sql` — columnas first_name / last_name
+6. `0006_report_update_check.sql` — refuerza la política UPDATE de `reports`
+   (impide que un empleado auto-apruebe su reporte)
 
-*(Las 5 ya están aplicadas en producción.)*
+*(Las 1–5 ya estaban aplicadas; **corre `0006` una vez** sobre el proyecto del
+cliente — es idempotente.)*
 
 ### Edge Functions (Supabase)
 - `login-with-pin` — login por PIN/identidad (**Verify JWT = OFF**)
@@ -133,6 +138,16 @@ supabase functions deploy admin-users    --project-ref siphkouwkdbouktpmmpo
 ### Crear el PRIMER super admin (arranque)
 En **Supabase → Table Editor → `employees`**, pon a un empleado existente con `role = super_admin`
 (entra por su PIN). Desde **Gestionar equipo** ya puede crear a los demás con correo.
+
+### Correr en MODO DEMO (sin Supabase)
+Sin `.env.local`, la app arranca sola en **modo demo**: siembra ~17 reportes con
+fotos y datos de ejemplo en el teléfono (IndexedDB). Útil para mostrarla sin
+backend. PINs demo: **1234 / 5678 / 4321** (empleados) y **Sandra Ruiz + 0000**
+(supervisor). Para resembrar: **Perfil → Reiniciar datos demo**.
+> ⚠️ Si entregas la app **copiando la carpeta** (en vez de `git clone`),
+> **elimina `.env.local`** antes de empaquetar — si viaja con la carpeta, la app
+> apuntará al Supabase real en vez de arrancar en demo. (Con `git clone` no
+> aplica: `.env.local` está en `.gitignore`.)
 
 ---
 

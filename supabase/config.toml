@@ -3,3 +3,6 @@ project_id = "kingdom-touch"
 
 [functions.login-with-pin]
 verify_jwt = false  # this function is the *gateway* to JWTs; it cannot itself require one
+
+[functions.admin-users]
+verify_jwt = true  # requires a staff JWT; the function also checks admin/super_admin role

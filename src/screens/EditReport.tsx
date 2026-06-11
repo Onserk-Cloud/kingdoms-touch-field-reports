@@ -39,7 +39,7 @@ export function EditReport() {
             .from('reports')
             .select('job_type, location, description, notes, review_note')
             .eq('id', id)
-            .single();
+            .maybeSingle();
           if (data) {
             setJobType((data.job_type as string) ?? '');
             setLocation((data.location as string) ?? '');

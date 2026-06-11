@@ -267,9 +267,11 @@ export const ktStore = {
 
   async clear() {
     const d = await db();
-    const tx = d.transaction(['reports', 'photos'], 'readwrite');
-    await tx.objectStore('reports').clear();
-    await tx.objectStore('photos').clear();
+    const stores = ['reports', 'photos', 'notifications', 'meta'] as const;
+    const tx = d.transaction(stores, 'readwrite');
+    for (const name of stores) {
+      await tx.objectStore(name).clear();
+    }
     await tx.done;
   },
 };
@@ -282,10 +284,20 @@ export function installAutoFlush(
   uploader: (r: OfflineReport, photos: OfflinePhoto[]) => Promise<string>,
   onComplete?: (result: { ok: number; failed: number }) => void,
 ): () => void {
+  let flushing = false;
   const handler = async () => {
     if (!navigator.onLine) return;
-    const result = await ktStore.flushQueue(uploader);
-    onComplete?.(result);
+    // Re-entrancy guard: a boot flush and an 'online' event (or two rapid
+    // 'online' events) must not run flushQueue concurrently, or both would read
+    // the same pending set and upload each report twice.
+    if (flushing) return;
+    flushing = true;
+    try {
+      const result = await ktStore.flushQueue(uploader);
+      onComplete?.(result);
+    } finally {
+      flushing = false;
+    }
   };
   window.addEventListener('online', handler);
   // Also try on boot if currently online.

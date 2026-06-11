@@ -47,12 +47,28 @@ create policy "reports: read own or all (sup)"
     or employee_id = (select id from public.employees where auth_user_id = auth.uid())
   );
 
+-- Two UPDATE policies with WITH CHECK so the NEW row is validated (a bare
+-- USING clause would let an employee self-approve or reassign their report).
 drop policy if exists "reports: owner or supervisor updates" on public.reports;
-create policy "reports: owner or supervisor updates"
+drop policy if exists "reports: staff updates" on public.reports;
+drop policy if exists "reports: owner updates own" on public.reports;
+
+-- Staff (supervisor/admin/super_admin) may review any report.
+create policy "reports: staff updates"
+  on public.reports for update
+  using (public.kt_is_staff())
+  with check (public.kt_is_staff());
+
+-- Owners may edit / resubmit their own report, but never set it to 'reviewed'
+-- (only a reviewer approves) nor reassign it to another employee.
+create policy "reports: owner updates own"
   on public.reports for update
   using (
-    public.kt_is_staff()
-    or employee_id = (select id from public.employees where auth_user_id = auth.uid())
+    employee_id = (select id from public.employees where auth_user_id = auth.uid())
+  )
+  with check (
+    employee_id = (select id from public.employees where auth_user_id = auth.uid())
+    and status::text in ('pending', 'submitted', 'needs_update')
   );
 
 drop policy if exists "photos: read via report" on public.report_photos;

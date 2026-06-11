@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme-context';
+import { useI18n } from '../lib/i18n';
 
 interface AppBarProps {
   title: string;
@@ -20,6 +21,7 @@ export function AppBar({
   dark = false,
 }: AppBarProps) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const txt = dark ? '#fff' : colors.charcoal;
 
@@ -49,7 +51,7 @@ export function AppBar({
         <button
           onClick={handleBack}
           className="kt-tap"
-          aria-label="Back"
+          aria-label={t('common.back')}
           style={{
             width: 38,
             height: 38,

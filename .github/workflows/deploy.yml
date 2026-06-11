@@ -30,8 +30,10 @@ jobs:
         run: npm run typecheck
 
       - name: Lint
-        run: npm run lint -- --max-warnings 0
-        continue-on-error: true
+        # Real quality gate: fails on any lint error. Tolerates exactly the 2
+        # known cosmetic react-refresh warnings (i18n.tsx, theme-context.tsx);
+        # a 3rd warning or any error fails the build.
+        run: npm run lint -- --max-warnings 2
 
       - name: Build
         env:

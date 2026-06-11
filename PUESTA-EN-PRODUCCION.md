@@ -11,8 +11,8 @@ con Supabase, para que la cuadrilla y el supervisor la usen de verdad.
 ## Resumen de pasos
 
 1. Crear el proyecto en Supabase
-2. Crear las tablas (correr la migración SQL)
-3. Desplegar la función de login (`login-with-pin`)
+2. Crear las tablas (correr las 6 migraciones SQL en orden)
+3. Desplegar las 2 Edge Functions (`login-with-pin` + `admin-users`)
 4. Conectar la app (`.env.local`)
 5. Cambiar los PINs de prueba (¡importante!)
 6. Probar en local
@@ -39,11 +39,15 @@ Tiempo estimado: **20–30 minutos**.
 **Opción A — SQL Editor (lo más rápido):**
 
 1. En el dashboard: **SQL Editor → New query**.
-2. Abre el archivo `supabase/migrations/0001_init.sql` del proyecto, copia TODO su
-   contenido y pégalo.
-3. Click **Run**.
-4. Verifica en **Table Editor** que aparecen 3 tablas: `employees`, `reports`,
-   `report_photos`, y en **Storage** un bucket privado `report-photos`.
+2. Ejecuta **en orden** el contenido de cada archivo de
+   `supabase/migrations/` (cada uno es idempotente, seguro de re-ejecutar):
+   `0001_init` → `0002_roles` → `0003_notifications` → `0004_login_throttle` →
+   `0005_employee_names` → `0006_report_update_check`.
+   - Saltarte alguna deja la app sin roles admin/super_admin, sin flujo de
+     revisión, sin notificaciones o sin las protecciones de seguridad.
+3. Verifica en **Table Editor** que aparecen las tablas `employees`, `reports`,
+   `report_photos`, `notifications`, `login_attempts`, y en **Storage** un
+   bucket privado `report-photos`.
 
 **Opción B — Supabase CLI** (si la tienes instalada):
 
@@ -51,27 +55,35 @@ Tiempo estimado: **20–30 minutos**.
 npm install -g supabase
 supabase login
 supabase link --project-ref <TU-PROJECT-REF>
-supabase db push
+supabase db push   # aplica las 6 migraciones en orden
 ```
 
 ---
 
-## 3. Desplegar la función de login (`login-with-pin`)
+## 3. Desplegar las 2 Edge Functions
 
-Esta función recibe el PIN, lo verifica con bcrypt y devuelve un token seguro.
+- **`login-with-pin`** — recibe el PIN, lo verifica con bcrypt y devuelve un
+  token seguro. *Verify JWT = OFF* (es la puerta de entrada a los tokens).
+- **`admin-users`** — gestión de equipo (crear empleados/staff, restablecer
+  PIN/contraseña, desbloquear). *Verify JWT = ON* (la función valida además el
+  rol admin/super_admin).
 
 **Opción A — CLI:**
 
 ```bash
-supabase functions deploy login-with-pin
+supabase functions deploy login-with-pin --no-verify-jwt
+supabase functions deploy admin-users
 ```
 
-**Opción B — Dashboard:** **Edge Functions → Create a function** → nombre
-`login-with-pin` → pega el contenido de
-`supabase/functions/login-with-pin/index.ts` → **Deploy**.
+**Opción B — Dashboard:** **Edge Functions → Create a function** para cada una
+(nombres `login-with-pin` y `admin-users`), pega el contenido de
+`supabase/functions/<nombre>/index.ts` y **Deploy**. Fija el flag *Verify JWT*
+de cada una (OFF para login-with-pin, ON para admin-users).
 
-> En Supabase Cloud, las variables `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`
-> que la función necesita se configuran **solas**. No tienes que hacer nada extra.
+> En Supabase Cloud, las variables `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y
+> `SUPABASE_ANON_KEY` que las funciones necesitan se configuran **solas**.
+> Importante: en **Authentication → Providers**, el proveedor **Email** debe
+> estar **habilitado** (login-with-pin firma sesiones por correo).
 
 ---
 
@@ -95,23 +107,30 @@ VITE_DEFAULT_THEME=forest
 La migración siembra 3 empleados con PINs públicos (0000 / 1234 / 5678). **Hay que
 cambiarlos antes de entregar**, o cualquiera que vea el código podría entrar.
 
-1. Genera el hash del nuevo PIN (ejemplo para el PIN `4827`):
+**Forma recomendada (sin SQL):** entra en la app como **supervisor/admin** →
+**Gestionar equipo**. Para cada empleado sembrado usa **Restablecer PIN** y
+escribe el nuevo PIN de 4 dígitos (la Edge Function `admin-users` lo hashea de
+forma segura). Aprovecha para **agregar a los empleados reales** de Kingdoms
+Touch Services con su nombre, rol y PIN propio.
+
+> Rol: `supervisor`/`admin`/`super_admin` para el personal de gestión,
+> `employee` para los técnicos de campo.
+
+**Alternativa por SQL** (si prefieres no usar la UI). Declara primero la
+dependencia bcryptjs (no viene instalada) y genera el hash:
 
 ```bash
-npm exec -- node -e "console.log(require('bcryptjs').hashSync('4827', 10))"
+npm i -D bcryptjs
+node -e "console.log(require('bcryptjs').hashSync('4827', 10))"   # PIN de ejemplo
 ```
 
-2. En **SQL Editor**, actualiza la columna `pin_hash` del empleado:
+Luego en **SQL Editor** actualiza la columna `pin_hash`:
 
 ```sql
 update public.employees
 set pin_hash = '<EL-HASH-QUE-TE-DIO>'
 where name = 'Sandra Ruiz';   -- repite por cada empleado
 ```
-
-3. Agrega a los empleados reales de Kingdoms Touch Services (con su nombre, rol y PIN propio).
-
-> Rol: `supervisor` para el encargado, `employee` para los técnicos.
 
 ---
 

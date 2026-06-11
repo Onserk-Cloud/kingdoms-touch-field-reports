@@ -68,8 +68,12 @@ export function Supervisor() {
         }));
         setRows(list);
       } else {
-        // Demo mode — use local IndexedDB + demo seed.
-        const local = await ktStore.listReports();
+        // Demo mode — use local IndexedDB + demo seed. Exclude the states a
+        // real backend never exposes to a supervisor (private drafts, sync
+        // errors), so the demo dashboard matches the Supabase path.
+        const local = (await ktStore.listReports()).filter(
+          (r) => r.status !== 'draft' && r.status !== 'error',
+        );
         const photos: Record<string, number> = {};
         for (const r of local) {
           const ps = await ktStore.listPhotos(r.id);

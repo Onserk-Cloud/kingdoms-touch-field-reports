@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from 'react';
@@ -38,6 +39,13 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(detectLocale);
+
+  // Keep <html lang> in sync with the active language from the first paint, so
+  // a detected (not just manually-chosen) locale is reflected for screen
+  // readers and translators.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);

@@ -44,7 +44,15 @@ export function Home() {
       const dayMs = 24 * 60 * 60 * 1000;
       setCounts({
         total: all.length,
-        today: all.filter((r) => now - r.createdAt < dayMs).length,
+        // "Submitted today" — only count reports that actually left the device
+        // (exclude drafts/queued/errors), matching the card label.
+        today: all.filter(
+          (r) =>
+            (r.status === 'submitted' ||
+              r.status === 'reviewed' ||
+              r.status === 'needs_update') &&
+            now - r.createdAt < dayMs,
+        ).length,
         week: all.filter((r) => now - r.createdAt < dayMs * 7).length,
         pending: all.filter((r) => r.status === 'pending').length,
       });
