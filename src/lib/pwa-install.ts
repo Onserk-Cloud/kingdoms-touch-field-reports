@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * PWA install helper.
@@ -39,9 +39,29 @@ export function useInstall() {
     typeof window !== 'undefined' && !!window.__ktInstall,
   );
   const [installed, setInstalled] = useState(isStandalone());
+  // If the user taps "Install" before Chrome has armed the prompt (it takes a
+  // few seconds on a first visit), remember the intent and prompt as soon as
+  // the event arrives instead of silently doing nothing.
+  const wantRef = useRef(false);
+
+  async function doPrompt(): Promise<boolean> {
+    const e = window.__ktInstall;
+    if (!e) return false;
+    await e.prompt();
+    const choice = await e.userChoice;
+    window.__ktInstall = null;
+    setCanInstall(false);
+    return choice.outcome === 'accepted';
+  }
 
   useEffect(() => {
-    const onAvail = () => setCanInstall(true);
+    const onAvail = () => {
+      setCanInstall(true);
+      if (wantRef.current) {
+        wantRef.current = false;
+        void doPrompt();
+      }
+    };
     const onDone = () => {
       setCanInstall(false);
       setInstalled(true);
@@ -52,16 +72,16 @@ export function useInstall() {
       window.removeEventListener('kt-installable', onAvail);
       window.removeEventListener('kt-installed', onDone);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function promptInstall(): Promise<boolean> {
-    const e = window.__ktInstall;
-    if (!e) return false;
-    await e.prompt();
-    const choice = await e.userChoice;
-    window.__ktInstall = null;
-    setCanInstall(false);
-    return choice.outcome === 'accepted';
+    if (!window.__ktInstall) {
+      // Not armed yet — queue the intent; onAvail will fire the prompt.
+      wantRef.current = true;
+      return false;
+    }
+    return doPrompt();
   }
 
   return { canInstall, installed, ios: isIOS(), promptInstall };

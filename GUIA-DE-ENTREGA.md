@@ -1,6 +1,6 @@
 # Kingdoms Touch Services · Field Reports — Guía de entrega
 
-**App en vivo:** https://kingdomstouchservices.netlify.app
+**App en vivo:** https://kingdom-touch.vercel.app
 **App bilingüe** (Español / English — detecta el idioma y se cambia desde Perfil).
 
 ---
@@ -90,13 +90,15 @@ está en ambos idiomas.
 ## 8. Despliegue y mantenimiento (para la agencia)
 
 **Repositorio:** GitHub `Onserk-Cloud/kingdoms-touch-field-reports` (público).
-**Hosting:** Netlify, **deploy automático** en cada `git push` a `main`.
+**Hosting:** Vercel (proyecto `kingdom-touch`, cuenta `webmasterkingdomstouch`).
+Deploy manual: `vercel --prod` · Deploy automático: conectar el repo en
+**Vercel → Settings → Git** (cada `git push` a `main` publica solo).
 **Backend:** Supabase (proyecto `siphkouwkdbouktpmmpo`).
 
 ### Variables de entorno
 - Local: archivo `.env.local` (no se sube a git):
   - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-- Netlify: las mismas en **Site configuration → Environment variables**.
+- Vercel: las mismas en **Project → Settings → Environment Variables** (ya configuradas en Production).
 
 ### Comandos
 ```bash

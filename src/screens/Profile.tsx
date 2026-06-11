@@ -20,12 +20,13 @@ export function Profile() {
   const navigate = useNavigate();
   const employee = useSessionStore((s) => s.employee);
   const logout = useSessionStore((s) => s.logout);
-  const { canInstall, installed, ios, promptInstall } = useInstall();
+  const { installed, ios, promptInstall } = useInstall();
   const [showInstallHint, setShowInstallHint] = useState(false);
 
   const handleInstall = async () => {
-    if (canInstall) await promptInstall();
-    else setShowInstallHint(true);
+    // Always try the native prompt; fall back to instructions if unavailable.
+    const ok = await promptInstall();
+    if (!ok) setShowInstallHint(true);
   };
 
   return (

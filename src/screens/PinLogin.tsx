@@ -36,11 +36,14 @@ export function PinLogin() {
 
   // PWA install affordance (also lives in Profile; here so first-time users
   // can install before logging in).
-  const { canInstall, installed, ios, promptInstall } = useInstall();
+  const { installed, ios, promptInstall } = useInstall();
   const [showInstallHint, setShowInstallHint] = useState(false);
   const handleInstall = async () => {
-    if (canInstall) await promptInstall();
-    else setShowInstallHint(true);
+    // Always try the native prompt; if it can't open (unsupported browser,
+    // or Chrome hasn't armed it yet — in which case it auto-opens when ready),
+    // fall back to the how-to instructions.
+    const ok = await promptInstall();
+    if (!ok) setShowInstallHint(true);
   };
 
   // Identity flow: a returning device remembers who you are, so you only
