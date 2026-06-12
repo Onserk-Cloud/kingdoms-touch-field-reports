@@ -22,32 +22,32 @@ export async function uploadReport(
 
   const sb = getSupabase();
 
-  // 1. Insert the report row.
-  const { data: row, error } = await sb
-    .from('reports')
-    .insert({
-      employee_id: report.employeeId,
-      job_type: report.jobType,
-      location: report.location,
-      gps_lat: report.gps?.lat ?? null,
-      gps_lng: report.gps?.lng ?? null,
-      gps_accuracy: report.gps?.accuracy ?? null,
-      description: report.description,
-      notes: report.notes ?? null,
-      completion_confirmed: report.completionConfirmed,
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
-    })
-    .select('id')
-    .single();
+  // 1. Insert the report row USING THE CLIENT-GENERATED ID so a retry after a
+  //    partial failure (photo upload died mid-way) resumes the SAME report
+  //    instead of cloning it — a unique-violation just means "already there".
+  const { error } = await sb.from('reports').insert({
+    id: report.id,
+    employee_id: report.employeeId,
+    job_type: report.jobType,
+    location: report.location,
+    gps_lat: report.gps?.lat ?? null,
+    gps_lng: report.gps?.lng ?? null,
+    gps_accuracy: report.gps?.accuracy ?? null,
+    description: report.description,
+    notes: report.notes ?? null,
+    completion_confirmed: report.completionConfirmed,
+    status: 'submitted',
+    submitted_at: new Date().toISOString(),
+  });
 
-  if (error || !row) {
-    throw new Error(error?.message ?? 'Failed to insert report row');
+  if (error && error.code !== '23505') {
+    throw new Error(error.message ?? 'Failed to insert report row');
   }
 
-  const remoteId = row.id as string;
+  const remoteId = report.id;
 
-  // 2. Upload each photo blob, then insert its metadata.
+  // 2. Upload each photo blob (deterministic path + upsert → retry-safe),
+  //    then insert its metadata with the photo's own id (duplicate = done).
   for (const p of photos) {
     const ext = blobExt(p.blob);
     const path = `${remoteId}/${p.id}.${ext}`;
@@ -58,16 +58,18 @@ export async function uploadReport(
         contentType: p.blob.type || 'image/jpeg',
         upsert: false,
       });
-    if (upErr) {
+    // "Already exists" on a retry means this photo made it up last time.
+    if (upErr && !/exist|duplicate/i.test(upErr.message)) {
       throw new Error(`Photo upload failed: ${upErr.message}`);
     }
 
     const { error: metaErr } = await sb.from('report_photos').insert({
+      id: p.id,
       report_id: remoteId,
       storage_path: path,
       caption: p.caption ?? null,
     });
-    if (metaErr) {
+    if (metaErr && metaErr.code !== '23505') {
       throw new Error(`Photo metadata insert failed: ${metaErr.message}`);
     }
   }

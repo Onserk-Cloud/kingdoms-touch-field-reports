@@ -60,7 +60,12 @@ export function Supervisor() {
           id: r.id as string,
           jobType: r.job_type as string,
           location: r.location as string,
-          status: r.status as BadgeKind,
+          // DB enum → badge kind ('needs_update' is not a BadgeKind; passing
+          // it raw crashed the whole dashboard the moment a report was
+          // flagged for changes).
+          status: (r.status === 'needs_update'
+            ? 'flagged'
+            : r.status) as BadgeKind,
           who: r.employees?.name ?? 'Unknown',
           time: new Date(r.submitted_at ?? r.created_at).getTime(),
           photos: r.report_photos?.length ?? 0,

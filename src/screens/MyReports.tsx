@@ -8,6 +8,7 @@ import { ClockIcon, PhotoIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { useSessionStore } from '../store/session';
 import { ktStore } from '../lib/offline-store';
+import { HAS_SUPABASE } from '../lib/supabase';
 import { relativeDate } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import type { OfflineReport } from '../lib/types';
@@ -92,7 +93,9 @@ export function MyReports() {
       case 'syncing':
         return 'pending';
       case 'error':
-        return 'flagged';
+        // Upload failures are auto-requeued at boot, so to the employee this
+        // is just "awaiting sync" — 'flagged' would read as supervisor action.
+        return 'pending';
       default:
         return 'draft';
     }
@@ -113,10 +116,21 @@ export function MyReports() {
     }
   };
 
-  // Drafts open the editor so the employee can finish them; everything else
-  // opens the read-only detail.
-  const openReport = (r: OfflineReport) =>
-    navigate(r.status === 'draft' ? `/report/${r.id}/edit` : `/report/${r.id}`);
+  // Synced reports open the remote detail; local-only states (draft or not
+  // yet uploaded) open the editor so the employee can finish/retry them —
+  // their id doesn't exist in Postgres, so the detail view can't show them.
+  const openReport = (r: OfflineReport) => {
+    if (HAS_SUPABASE && r.remoteId) {
+      navigate(`/report/${r.remoteId}`);
+      return;
+    }
+    const localOnly =
+      r.status === 'draft' ||
+      r.status === 'pending' ||
+      r.status === 'syncing' ||
+      r.status === 'error';
+    navigate(localOnly ? `/report/${r.id}/edit` : `/report/${r.id}`);
+  };
 
   return (
     <PhoneFrame bg={colors.ivory}>

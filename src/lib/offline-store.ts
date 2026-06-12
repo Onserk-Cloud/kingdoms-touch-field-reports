@@ -200,6 +200,26 @@ export const ktStore = {
     return filtered.sort((a, b) => b.createdAt - a.createdAt);
   },
 
+  /**
+   * Recover reports stranded in 'error' (a flush attempt failed) or
+   * 'syncing' (the tab was killed mid-upload) by re-queueing them as
+   * 'pending'. Safe to retry because uploads are idempotent (client ids).
+   */
+  async requeueStuck(): Promise<number> {
+    const d = await db();
+    const all = (await d.getAll('reports')) as OfflineReport[];
+    let n = 0;
+    for (const r of all) {
+      if (r.status === 'error' || r.status === 'syncing') {
+        r.status = 'pending';
+        delete r.error;
+        await d.put('reports', r);
+        n++;
+      }
+    }
+    return n;
+  },
+
   /** Find all "pending" reports — uploader iterates over these. */
   async pendingReports(): Promise<OfflineReport[]> {
     const d = await db();
@@ -293,6 +313,10 @@ export function installAutoFlush(
     if (flushing) return;
     flushing = true;
     try {
+      // First rescue anything stranded by a failed/interrupted upload
+      // ('error'/'syncing' → 'pending'); uploads are idempotent so retrying
+      // can never duplicate a report.
+      await ktStore.requeueStuck();
       const result = await ktStore.flushQueue(uploader);
       onComplete?.(result);
     } finally {

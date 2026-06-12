@@ -60,7 +60,9 @@ export function Badge({ kind, label }: BadgeProps) {
     },
   };
 
-  const m = map[kind];
+  // Defensive: an unknown kind (e.g. a raw DB status that slipped through)
+  // must never crash the whole app — fall back to the neutral draft style.
+  const m = map[kind] ?? map.draft;
 
   return (
     <span

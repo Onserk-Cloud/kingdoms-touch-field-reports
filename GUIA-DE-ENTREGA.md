@@ -120,9 +120,12 @@ npx tsx scripts/check-i18n.ts   # verifica paridad ES/EN de textos
 5. `0005_employee_names.sql` — columnas first_name / last_name
 6. `0006_report_update_check.sql` — refuerza la política UPDATE de `reports`
    (impide que un empleado auto-apruebe su reporte)
+7. `0007_security_hardening.sql` — jerarquía de roles real en `employees`
+   (un admin ya no puede auto-ascenderse ni tocar admins por API), oculta
+   `pin_hash` del API de datos, e impide insertar reportes ya "aprobados"
 
-*(Las 1–5 ya estaban aplicadas; **corre `0006` una vez** sobre el proyecto del
-cliente — es idempotente.)*
+*(Las 1–5 ya estaban aplicadas; **corre `0006` y `0007` una vez** sobre el
+proyecto del cliente — son idempotentes.)*
 
 ### Edge Functions (Supabase)
 - `login-with-pin` — login por PIN/identidad (**Verify JWT = OFF**)

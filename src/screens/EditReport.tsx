@@ -8,6 +8,7 @@ import { useTheme } from '../theme-context';
 import { useI18n } from '../lib/i18n';
 import { HAS_SUPABASE, getSupabase } from '../lib/supabase';
 import { ktStore } from '../lib/offline-store';
+import { uploadReport } from '../lib/uploader';
 import { notifyNewReport } from '../lib/notifications';
 
 /**
@@ -28,11 +29,29 @@ export function EditReport() {
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [reviewNote, setReviewNote] = useState<string | null>(null);
+  // Local-only reports (drafts / not-yet-uploaded) live in IndexedDB; their
+  // id doesn't exist in Postgres, so they must be loaded AND submitted via
+  // the local store + uploader, never via a remote UPDATE.
+  const [isLocal, setIsLocal] = useState(false);
 
   useEffect(() => {
     void (async () => {
       setLoading(true);
       try {
+        // Local store first — for rows that never synced (no remoteId:
+        // drafts and stuck uploads) and for everything in demo mode. A
+        // synced report also lives locally with the same id; its edits must
+        // go to Postgres below.
+        const r = await ktStore.getReport(id);
+        if (r && (!r.remoteId || !HAS_SUPABASE)) {
+          setIsLocal(!r.remoteId);
+          setJobType(r.jobType);
+          setLocation(r.location);
+          setDescription(r.description);
+          setNotes(r.notes ?? '');
+          setReviewNote(r.reviewNote ?? null);
+          return;
+        }
         if (HAS_SUPABASE) {
           const sb = getSupabase();
           const { data } = await sb
@@ -47,15 +66,6 @@ export function EditReport() {
             setNotes((data.notes as string) ?? '');
             setReviewNote((data.review_note as string) ?? null);
           }
-        } else {
-          const r = await ktStore.getReport(id);
-          if (r) {
-            setJobType(r.jobType);
-            setLocation(r.location);
-            setDescription(r.description);
-            setNotes(r.notes ?? '');
-            setReviewNote(r.reviewNote ?? null);
-          }
         }
       } finally {
         setLoading(false);
@@ -66,7 +76,19 @@ export function EditReport() {
   async function resubmit() {
     setSaving(true);
     try {
-      if (HAS_SUPABASE) {
+      if (isLocal && HAS_SUPABASE) {
+        // Finish a local draft / retry a stuck upload: save the edits, queue
+        // it, and flush through the (idempotent) uploader. If we're offline
+        // it stays 'pending' and auto-flush sends it when signal returns.
+        await ktStore.updateReport(id, {
+          jobType,
+          location,
+          description,
+          notes,
+        });
+        await ktStore.queueReport(id);
+        await ktStore.flushQueue(uploadReport);
+      } else if (HAS_SUPABASE) {
         const sb = getSupabase();
         await sb
           .from('reports')
