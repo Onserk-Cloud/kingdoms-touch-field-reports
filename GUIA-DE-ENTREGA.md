@@ -153,7 +153,31 @@ backend. PINs demo: **1234 / 5678 / 4321** (empleados) y **Sandra Ruiz + 0000**
 
 ---
 
-## 9. Calidad
+## 9. Solución de problemas
+
+### Para usuarios (resumen — el detalle está en el manual PDF y en la app: Perfil → Manual de uso)
+| Problema | Solución |
+|---|---|
+| No captura el GPS / no abre la cámara | Activar el permiso de Ubicación/Cámara en los ajustes del teléfono y reintentar |
+| Reporte en «Esperando sincronizar» | Está guardado en el teléfono; se envía solo al abrir la app con señal |
+| «No se pudo cargar. Revisa tu conexión» | Tocar Reintentar; revisar señal/WiFi. Los datos no se pierden |
+| La app no muestra lo más nuevo | Cerrarla por completo y reabrir (el service worker actualiza al segundo arranque) |
+| «Reporte no encontrado» | El reporte es de otra cuenta (RLS) o fue eliminado; entrar con la cuenta correcta |
+| Cuenta bloqueada / PIN olvidado | Admin: Perfil → Gestionar equipo → Desbloquear o Reiniciar |
+
+### Para el admin / la agencia
+| Problema | Solución |
+|---|---|
+| «PIN already in use» al crear miembro | Ese PIN ya lo usa otro empleado activo — elegir otro |
+| El login con PIN devuelve error 500 | Supabase → Edge Functions → `login-with-pin` → Logs. Verificar que **Authentication → Providers → Email** esté habilitado |
+| Empleado nuevo no puede entrar | Verificar el nombre tal como se registró (acentos no importan; acepta nombre parcial) o Reiniciar su PIN |
+| Cambios en una Edge Function no aplican | Redesplegar: `supabase functions deploy <nombre> --project-ref siphkouwkdbouktpmmpo` (login-with-pin con `--no-verify-jwt`) |
+| El deploy de Vercel falla | Correr `npm run build` local para ver el error; corregir y `vercel --prod` |
+| Teléfonos con versión vieja de la app | Es el service worker: cerrar/reabrir la app dos veces; en caso extremo, borrar datos del sitio en el navegador |
+
+---
+
+## 10. Calidad
 
 - **Lighthouse (producción):** Performance ~95 · Accesibilidad 100 · Best Practices 100 · SEO 100
 - **Tests:** 18 (lógica de login, formato, paridad de idiomas) — `npm test`

@@ -34,6 +34,9 @@ const dict: NsDict = {
     faq: 'Quick answers',
     faqSteps:
       'Forgot your PIN? Your admin resets it from Manage team.\nAccount locked? Your admin unlocks it instantly.\nNo internet? Reports save locally and sync later.\nChange language: Profile › Language.',
+    trouble: 'Troubleshooting',
+    troubleSteps:
+      'GPS not captured? Allow Location for the app in your phone settings, then retry.\nCamera won’t open? Enable the Camera permission — or upload from your gallery.\nReport stuck on “Awaiting sync”? It’s saved — open the app with signal and it sends itself.\n“Couldn’t load” error? Tap Retry and check your signal. Your data isn’t lost.\nApp looks outdated? Fully close it and reopen (updates install on relaunch).\n“Report not found”? It belongs to another account — sign in with your own.',
   },
   es: {
     title: 'Manual de Uso',
@@ -65,6 +68,9 @@ const dict: NsDict = {
     faq: 'Respuestas rápidas',
     faqSteps:
       '¿Olvidaste tu PIN? Tu admin lo reinicia desde Gestionar equipo.\n¿Cuenta bloqueada? Tu admin la desbloquea al instante.\n¿Sin internet? Los reportes se guardan y sincronizan después.\nCambiar idioma: Perfil › Idioma.',
+    trouble: 'Solución de problemas',
+    troubleSteps:
+      '¿No captura el GPS? Permite la Ubicación para la app en los ajustes del teléfono y reintenta.\n¿No abre la cámara? Activa el permiso de Cámara — o sube fotos desde la galería.\n¿Reporte en «Esperando sincronizar»? Está guardado — abre la app con señal y se envía solo.\n¿Error «No se pudo cargar»? Toca Reintentar y revisa tu señal. Tus datos no se pierden.\n¿La app se ve vieja? Ciérrala por completo y ábrela de nuevo (las actualizaciones se instalan al reabrir).\n¿«Reporte no encontrado»? Pertenece a otra cuenta — entra con la tuya.',
   },
 };
 

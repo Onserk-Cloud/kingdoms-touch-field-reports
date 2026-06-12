@@ -25,6 +25,7 @@ const SECTIONS: Section[] = [
   { key: 'review', roles: ['supervisor', 'admin', 'super_admin'] },
   { key: 'manage', roles: ['admin', 'super_admin'] },
   { key: 'faq', roles: 'all' },
+  { key: 'trouble', roles: 'all' },
 ];
 
 export function Help() {

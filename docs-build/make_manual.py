@@ -541,6 +541,65 @@ def build_story(lang):
             Paragraph(q, sub_h),
             Paragraph(a, body),
         ]))
+
+    # 7 · Troubleshooting
+    s += section(L("Sección 7", "Section 7"),
+                 L("Solución de problemas", "Troubleshooting"))
+    trouble = [
+        (L("El GPS no se captura", "GPS isn't captured"),
+         L("Permite el acceso a ubicación y reintenta desde el reporte. "
+           "iPhone: Ajustes &gt; Privacidad y seguridad &gt; Localización "
+           "&gt; Safari (o la app). Android: Ajustes &gt; Aplicaciones &gt; "
+           "Chrome &gt; Permisos &gt; Ubicación.",
+           "Allow location access and retry from the report. iPhone: "
+           "Settings &gt; Privacy &amp; Security &gt; Location Services "
+           "&gt; Safari (or the app). Android: Settings &gt; Apps &gt; "
+           "Chrome &gt; Permissions &gt; Location.")),
+        (L("La cámara no abre", "The camera won't open"),
+         L("Es el permiso de Cámara: actívalo en los ajustes del teléfono "
+           "(misma ruta que el GPS). También puedes subir fotos desde la "
+           "galería con el botón de la izquierda.",
+           "It's the Camera permission: enable it in your phone settings "
+           "(same path as GPS). You can also upload photos from your "
+           "gallery with the left button.")),
+        (L("Mi reporte dice «Esperando sincronizar»",
+           "My report says “Awaiting sync”"),
+         L("No había conexión al enviarlo. Está guardado en tu teléfono: "
+           "abre la app cuando tengas señal o WiFi y se envía solo.",
+           "There was no connection when you sent it. It's saved on your "
+           "phone: open the app when you have signal or WiFi and it sends "
+           "itself.")),
+        (L("Sale «No se pudo cargar. Revisa tu conexión»",
+           "I see “Couldn't load. Check your connection”"),
+         L("Toca «Reintentar». Si sigue, revisa tu señal o WiFi. Tus datos "
+           "no se pierden.",
+           "Tap “Retry”. If it persists, check your signal or "
+           "WiFi. Your data is not lost.")),
+        (L("La app no muestra lo más nuevo",
+           "The app doesn't show the latest changes"),
+         L("Cierra la app por completo y ábrela de nuevo (hasta dos veces). "
+           "Las actualizaciones se instalan solas al reabrir.",
+           "Fully close the app and reopen it (up to twice). Updates "
+           "install automatically on relaunch.")),
+        (L("Dice «Reporte no encontrado»", "It says “Report not found”"),
+         L("Ese reporte pertenece a otra cuenta o fue eliminado. Verifica "
+           "que entraste con tu propia cuenta.",
+           "That report belongs to another account or was deleted. Make "
+           "sure you signed in with your own account.")),
+        (L("(Admins) «PIN already in use» al crear un miembro",
+           "(Admins) “PIN already in use” when creating a member"),
+         L("Ese PIN ya lo usa otro empleado activo: elige uno diferente. "
+           "Y si alguien del staff olvidó su contraseña, usa «Reiniciar» "
+           "en Gestionar equipo.",
+           "That PIN is already used by another active employee: pick a "
+           "different one. And if a staff member forgot their password, "
+           "use “Reset” in Manage team.")),
+    ]
+    for q, a in trouble:
+        s.append(KeepTogether([
+            Paragraph(q, sub_h),
+            Paragraph(a, body),
+        ]))
     s.append(Spacer(1, 16))
     s.append(tip_box(L("Soporte", "Support"), L(
         "¿Algo no funciona como esperabas? Escribe a tu administrador o al "
