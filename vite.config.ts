@@ -13,7 +13,9 @@ export default defineConfig({
     cssInjectedByJsPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'script-defer',
+      // We register ourselves in main.tsx (virtual:pwa-register) so the app
+      // can poll for updates and reload itself — users never reinstall.
+      injectRegister: false,
       includeAssets: ['icons/*.png'],
       manifest: {
         name: 'Kingdoms Touch Services · Field Reports',

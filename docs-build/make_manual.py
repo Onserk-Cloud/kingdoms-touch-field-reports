@@ -505,6 +505,84 @@ def build_story(lang):
           "PINs can't be shared between active employees: if the system "
           "rejects one, pick another."),
     ])
+    s.append(Spacer(1, 8))
+    s.append(tip_box(L("Sobre la ubicación GPS", "About GPS location"), L(
+        "La ubicación sale del GPS del teléfono, no de la red: una VPN "
+        "<font name='Manrope-Bold'>no</font> la cambia. Sí existen apps de "
+        "«ubicación falsa» (sobre todo en Android) y ninguna aplicación web "
+        "puede detectarlas con certeza. Mitigación: cada reporte registra la "
+        "precisión (±m), la dirección legible y exige fotos del trabajo — "
+        "si la ubicación no cuadra con las fotos o el cliente, pide cambios.",
+        "Location comes from the phone's GPS, not the network: a VPN does "
+        "<font name='Manrope-Bold'>not</font> change it. “Fake "
+        "location” apps do exist (mostly on Android) and no web app can "
+        "detect them with certainty. Mitigation: every report records the "
+        "accuracy (±m), the readable address and requires photos of the "
+        "work — if the location doesn't match the photos or the customer, "
+        "request changes.")))
+    s.append(Paragraph(L("Todas las funciones de la app",
+                         "Complete feature list"), sub_h))
+    s += bullets([
+        L("Reportes de campo con fotos, GPS y notas; confirmación de "
+          "trabajo completado.",
+          "Field reports with photos, GPS and notes; work-completed "
+          "confirmation."),
+        L("Funciona sin conexión: el reporte se guarda en el teléfono y se "
+          "sincroniza solo.",
+          "Works offline: reports are saved on the phone and sync "
+          "automatically."),
+        L("Fotos comprimidas automáticamente para ahorrar datos.",
+          "Photos are compressed automatically to save data."),
+        L("GPS con precisión registrada (±m), dirección legible y botón "
+          "«Abrir en Mapas» (también en el PDF).",
+          "GPS with recorded accuracy (±m), readable address and an "
+          "“Open in Maps” button (also in the PDF)."),
+        L("Flujo de revisión: aprobar, pedir cambios con motivo, y "
+          "reenviar hasta aprobar.",
+          "Review flow: approve, request changes with a reason, and "
+          "resubmit until approved."),
+        L("Notificaciones dentro de la app con contador (nuevos reportes, "
+          "aprobados, cambios pedidos).",
+          "In-app notifications with a counter (new reports, approvals, "
+          "change requests)."),
+        L("Exportar cualquier reporte a PDF con la marca, fotos, firma y "
+          "enlace al mapa (bilingüe).",
+          "Export any report to a branded PDF with photos, signature and "
+          "map link (bilingual)."),
+        L("4 roles con permisos en el servidor: empleado, supervisor, "
+          "admin y super admin.",
+          "4 roles enforced server-side: employee, supervisor, admin and "
+          "super admin."),
+        L("Acceso de empleados con nombre + PIN (el dispositivo los "
+          "recuerda); staff con correo + contraseña.",
+          "Employee access with name + PIN (the device remembers them); "
+          "staff with email + password."),
+        L("Seguridad: bloqueo tras 3 intentos, PINs únicos, desbloqueo y "
+          "reseteo por el admin, datos protegidos por rol en la base de "
+          "datos.",
+          "Security: lock after 3 attempts, unique PINs, admin unlock and "
+          "reset, role-protected data at the database level."),
+        L("Gestión de equipo: crear miembros, resetear accesos, "
+          "desbloquear, activar/desactivar.",
+          "Team management: create members, reset access, unlock, "
+          "activate/deactivate."),
+        L("Bilingüe español/inglés en toda la app y el PDF (se detecta "
+          "solo; cambiable en Perfil).",
+          "Bilingual Spanish/English across the app and PDF "
+          "(auto-detected; changeable in Profile)."),
+        L("Instalable como app (Android, iPhone y computadora) con su "
+          "propio ícono.",
+          "Installable as an app (Android, iPhone and desktop) with its "
+          "own icon."),
+        L("Actualizaciones automáticas: la app se actualiza sola, nunca "
+          "hay que reinstalarla.",
+          "Automatic updates: the app updates itself — no reinstalling, "
+          "ever."),
+        L("Manual de uso integrado (Perfil > Manual de uso) según el rol, "
+          "más este PDF descargable.",
+          "Built-in user manual (Profile > User manual) per role, plus "
+          "this downloadable PDF."),
+    ])
 
     # 6 · FAQ
     s += section(L("Sección 6", "Section 6"),
@@ -575,12 +653,16 @@ def build_story(lang):
            "no se pierden.",
            "Tap “Retry”. If it persists, check your signal or "
            "WiFi. Your data is not lost.")),
-        (L("La app no muestra lo más nuevo",
-           "The app doesn't show the latest changes"),
-         L("Cierra la app por completo y ábrela de nuevo (hasta dos veces). "
-           "Las actualizaciones se instalan solas al reabrir.",
-           "Fully close the app and reopen it (up to twice). Updates "
-           "install automatically on relaunch.")),
+        (L("¿Cómo se actualiza la app?", "How does the app update?"),
+         L("Sola. Busca versiones nuevas al abrirla, al volver a primer "
+           "plano y cada 30 minutos, y se recarga automáticamente. Nunca "
+           "hay que desinstalarla ni reinstalarla. Si justo no ves un "
+           "cambio, ciérrala y ábrela una vez.",
+           "By itself. It checks for new versions when opened, when "
+           "brought back to the foreground and every 30 minutes, then "
+           "reloads automatically. You never need to uninstall or "
+           "reinstall it. If you don't see a change yet, close and reopen "
+           "it once.")),
         (L("Dice «Reporte no encontrado»", "It says “Report not found”"),
          L("Ese reporte pertenece a otra cuenta o fue eliminado. Verifica "
            "que entraste con tu propia cuenta.",

@@ -11,6 +11,8 @@ interface ExportOptions {
   reviewerSignature?: string;
   /** UI language for the PDF labels (defaults to English). */
   locale?: Locale;
+  /** Human-readable address resolved from the GPS point (optional). */
+  address?: string | null;
 }
 
 /**
@@ -84,6 +86,9 @@ export async function exportReportPdf(
         ? `${formatGps(report.gps.lat, report.gps.lng)} (±${Math.round(report.gps.accuracy)}m)`
         : L('notCaptured'),
     ],
+    ...(opts.address
+      ? ([[L('address'), opts.address]] as [string, string][])
+      : []),
     [L('photos'), String(photos.length)],
     [L('status'), L(`status_${report.status ?? 'submitted'}`).toUpperCase()],
     [
@@ -101,6 +106,16 @@ export async function exportReportPdf(
     doc.setFont('helvetica', 'normal');
     doc.text(v, margin + 110, y, {
       maxWidth: pageWidth - margin * 2 - 110,
+    });
+    y += 16;
+  }
+
+  // Clickable map link for the captured GPS point.
+  if (report.gps) {
+    doc.setTextColor(31, 61, 43);
+    doc.setFont('helvetica', 'bold');
+    doc.textWithLink(`> ${L('viewOnMap')}`, margin + 110, y, {
+      url: `https://www.google.com/maps?q=${report.gps.lat},${report.gps.lng}`,
     });
     y += 16;
   }

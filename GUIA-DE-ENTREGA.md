@@ -161,7 +161,7 @@ backend. PINs demo: **1234 / 5678 / 4321** (empleados) y **Sandra Ruiz + 0000**
 | No captura el GPS / no abre la cámara | Activar el permiso de Ubicación/Cámara en los ajustes del teléfono y reintentar |
 | Reporte en «Esperando sincronizar» | Está guardado en el teléfono; se envía solo al abrir la app con señal |
 | «No se pudo cargar. Revisa tu conexión» | Tocar Reintentar; revisar señal/WiFi. Los datos no se pierden |
-| La app no muestra lo más nuevo | Cerrarla por completo y reabrir (el service worker actualiza al segundo arranque) |
+| ¿Cómo se actualiza la app? | **Sola**: busca versiones al abrir, al volver a primer plano y cada 30 min, y se recarga automáticamente. Nunca hay que reinstalar |
 | «Reporte no encontrado» | El reporte es de otra cuenta (RLS) o fue eliminado; entrar con la cuenta correcta |
 | Cuenta bloqueada / PIN olvidado | Admin: Perfil → Gestionar equipo → Desbloquear o Reiniciar |
 
@@ -173,7 +173,8 @@ backend. PINs demo: **1234 / 5678 / 4321** (empleados) y **Sandra Ruiz + 0000**
 | Empleado nuevo no puede entrar | Verificar el nombre tal como se registró (acentos no importan; acepta nombre parcial) o Reiniciar su PIN |
 | Cambios en una Edge Function no aplican | Redesplegar: `supabase functions deploy <nombre> --project-ref siphkouwkdbouktpmmpo` (login-with-pin con `--no-verify-jwt`) |
 | El deploy de Vercel falla | Correr `npm run build` local para ver el error; corregir y `vercel --prod` |
-| Teléfonos con versión vieja de la app | Es el service worker: cerrar/reabrir la app dos veces; en caso extremo, borrar datos del sitio en el navegador |
+| Teléfonos con versión vieja de la app | No debería pasar: la app se auto-actualiza (al abrir, al enfocar y cada 30 min). Si un teléfono quedara pegado: cerrar y reabrir la app una vez |
+| ¿Pueden falsear el GPS con una VPN o apps? | Una **VPN no cambia el GPS** (la ubicación viene del satélite/SO, no de la red). Apps de "ubicación falsa" sí existen (sobre todo Android) y **ninguna app web puede detectarlas con certeza**. Mitigación: precisión ±m registrada, dirección legible visible, fotos obligatorias y revisión del supervisor |
 
 ---
 

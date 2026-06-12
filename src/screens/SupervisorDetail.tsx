@@ -14,6 +14,7 @@ import { formatDateTime, formatGps, initialsOf } from '../lib/format';
 import { useSessionStore } from '../store/session';
 import { ktStore } from '../lib/offline-store';
 import { notifyReview } from '../lib/notifications';
+import { reverseGeocode, mapsUrl } from '../lib/geocode';
 import { getDemoEmployee } from '../lib/auth';
 import type { OfflinePhoto, OfflineReport } from '../lib/types';
 
@@ -55,11 +56,26 @@ export function SupervisorDetail() {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [reasonOpen, setReasonOpen] = useState(false);
   const [reasonText, setReasonText] = useState('');
+  const [address, setAddress] = useState<string | null>(null);
 
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Resolve a human-readable address from the captured GPS point.
+  useEffect(() => {
+    setAddress(null);
+    if (row?.gps_lat == null || row?.gps_lng == null) return;
+    let alive = true;
+    void reverseGeocode(row.gps_lat, row.gps_lng, locale).then((a) => {
+      if (alive) setAddress(a);
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row?.gps_lat, row?.gps_lng, locale]);
 
   async function load() {
     setLoading(true);
@@ -251,6 +267,7 @@ export function SupervisorDetail() {
         locale,
         employeeName: row.employee.name,
         approverName: me?.name,
+        address,
         approvedAt: row.reviewed_at
           ? new Date(row.reviewed_at).getTime()
           : undefined,
@@ -668,6 +685,77 @@ export function SupervisorDetail() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {row.gps_lat != null && row.gps_lng != null && (
+          <div
+            style={{
+              marginTop: 10,
+              background: '#fff',
+              border: `1px solid ${colors.line}`,
+              borderRadius: 14,
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: colors.goldDeep,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  marginBottom: 3,
+                }}
+              >
+                {t('supervisorDetail.addressEyebrow')}
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: colors.charcoal,
+                  lineHeight: 1.35,
+                }}
+              >
+                {address ?? formatGps(row.gps_lat, row.gps_lng)}
+              </div>
+            </div>
+            <a
+              href={mapsUrl(row.gps_lat, row.gps_lng)}
+              target="_blank"
+              rel="noreferrer"
+              className="kt-tap"
+              style={{
+                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                minHeight: 44,
+                padding: '0 14px',
+                borderRadius: 12,
+                background: colors.forest,
+                color: '#fff',
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: 0.2,
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path
+                  d="M7 1.5C5 1.5 3 3 3 5.5 3 8 7 12.5 7 12.5s4-4.5 4-7C11 3 9 1.5 7 1.5z"
+                  stroke="#fff"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+                <circle cx="7" cy="5.5" r="1.4" fill="#fff" />
+              </svg>
+              {t('supervisorDetail.openMap')}
+            </a>
           </div>
         )}
 
