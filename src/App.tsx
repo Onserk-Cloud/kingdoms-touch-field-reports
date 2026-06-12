@@ -46,6 +46,9 @@ const Notifications = lazy(() =>
 const Profile = lazy(() =>
   import('./screens/Profile').then((m) => ({ default: m.Profile })),
 );
+const Help = lazy(() =>
+  import('./screens/Help').then((m) => ({ default: m.Help })),
+);
 
 /** Brief neutral screen shown while a route chunk loads. */
 function RouteFallback() {
@@ -127,6 +130,14 @@ export function App() {
           element={
             <RequireAuth>
               <Notifications />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/help"
+          element={
+            <RequireAuth>
+              <Help />
             </RequireAuth>
           }
         />

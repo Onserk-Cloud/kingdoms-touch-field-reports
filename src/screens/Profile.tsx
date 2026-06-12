@@ -277,6 +277,9 @@ export function Profile() {
             {t('profile.viewMyReports')}
           </SecondaryButton>
         )}
+        <SecondaryButton onClick={() => navigate('/help')}>
+          {t('profile.userManual')}
+        </SecondaryButton>
 
         {!HAS_SUPABASE && (
           <>

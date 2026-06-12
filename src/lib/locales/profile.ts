@@ -16,6 +16,7 @@ const dict: NsDict = {
       'In Safari: tap the Share button, then “Add to Home Screen”.',
     installHintOther:
       'Open your browser menu (⋮) and choose “Install app” / “Add to Home screen”.',
+    userManual: 'User manual',
   },
   es: {
     title: 'Perfil',
@@ -33,6 +34,7 @@ const dict: NsDict = {
       'En Safari: toca el botón Compartir y luego “Agregar a inicio”.',
     installHintOther:
       'Abre el menú del navegador (⋮) y elige “Instalar app” / “Agregar a pantalla de inicio”.',
+    userManual: 'Manual de uso',
   },
 };
 

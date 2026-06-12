@@ -41,3 +41,4 @@ dev-dist/
 
 lh.json
 .vercel
+docs-build/preview-*.png
