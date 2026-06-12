@@ -49,6 +49,35 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* ─── Native-app feel ─────────────────────────────────────────
+   touch-action: manipulation kills double-tap-to-zoom (a web tell)
+   while KEEPING pinch-zoom for accessibility. */
+html,
+body {
+  touch-action: manipulation;
+}
+
+/* No long-press text selection / iOS copy-callout on UI chrome.
+   Real text entry (inputs/textareas) stays selectable below. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Photos shouldn't drag like web images or offer "save image" on long-press */
+img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
 button,
 input,
 textarea,
@@ -101,13 +130,15 @@ input[type='number'] {
   transform: scale(0.97);
 }
 
-/* Forms — let the actual <input> field-look match the fake prototype */
+/* Forms — let the actual <input> field-look match the fake prototype.
+   16px minimum: iOS auto-zooms the viewport when focusing inputs below 16px,
+   which feels broken in an installed app. */
 .kt-input {
   width: 100%;
   background: transparent;
   border: none;
   outline: none;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--kt-ink);
   font-weight: 500;
   font-family: inherit;
