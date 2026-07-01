@@ -19,6 +19,95 @@
     />
     <title>Kingdoms Touch Services · Field Reports</title>
 
+    <!-- Self-heal a stale app shell. If a hashed chunk fails to load (a
+         returning client whose cached index references a now-deleted hash, or
+         a chunk served as HTML), the module bundle dies before React can mount
+         and the app is blank. This inline script runs regardless: on such an
+         error it clears the service worker + caches and reloads ONCE. -->
+    <script>
+      (function () {
+        var HEAL_KEY = 'kt:sw-heal';
+        function looksStale(msg, target) {
+          if (
+            target &&
+            target.tagName === 'SCRIPT' &&
+            target.src &&
+            /\/assets\/.*\.js/.test(target.src)
+          )
+            return true;
+          if (!msg) return false;
+          return /module script|dynamically imported module|Loading chunk|Importing a module script failed|Failed to fetch dynamically|MIME type|Unexpected token '<'/i.test(
+            msg,
+          );
+        }
+        var healing = false;
+        function heal() {
+          if (healing) return;
+          healing = true;
+          try {
+            if (sessionStorage.getItem(HEAL_KEY)) return; // already tried this session
+            sessionStorage.setItem(HEAL_KEY, '1');
+          } catch (e) {
+            /* ignore */
+          }
+          var reload = function () {
+            try {
+              location.reload();
+            } catch (e) {
+              /* ignore */
+            }
+          };
+          var tasks = [];
+          try {
+            if ('serviceWorker' in navigator) {
+              tasks.push(
+                navigator.serviceWorker
+                  .getRegistrations()
+                  .then(function (rs) {
+                    return Promise.all(
+                      rs.map(function (r) {
+                        return r.unregister();
+                      }),
+                    );
+                  })
+                  .catch(function () {}),
+              );
+            }
+            if (window.caches && caches.keys) {
+              tasks.push(
+                caches
+                  .keys()
+                  .then(function (ks) {
+                    return Promise.all(
+                      ks.map(function (k) {
+                        return caches.delete(k);
+                      }),
+                    );
+                  })
+                  .catch(function () {}),
+              );
+            }
+          } catch (e) {
+            /* ignore */
+          }
+          Promise.all(tasks).then(reload, reload);
+          setTimeout(reload, 1500); // safety net if the clears hang
+        }
+        window.addEventListener(
+          'error',
+          function (e) {
+            if (looksStale(e && e.message, e && e.target)) heal();
+          },
+          true,
+        );
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e && e.reason;
+          var msg = r && (r.message || String(r));
+          if (looksStale(msg, null)) heal();
+        });
+      })();
+    </script>
+
     <!-- Capture the install prompt as early as possible so an in-app
          "Install app" button can trigger it later. -->
     <script>

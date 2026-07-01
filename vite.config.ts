@@ -74,9 +74,12 @@ export default defineConfig({
         // Workbox-generated SW (keeps precache + runtime caching intact).
         importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp}'],
-        // Don't precache rarely-used heavy chunks on install — they'd download
-        // on the very first load. They get cached on demand instead.
-        globIgnores: ['**/pdf-*.js', '**/supabase-*.js'],
+        // Precache ALL emitted chunks (incl. react/supabase/pdf, which are
+        // eagerly modulepreloaded from index.html anyway). This keeps the
+        // service worker self-consistent: after a deploy the new SW's precache
+        // holds a matching hash for every chunk the new index references, so a
+        // returning client never requests a now-deleted chunk over the network
+        // (which returned the SPA fallback → blank screen). Updates are atomic.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {

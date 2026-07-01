@@ -3,7 +3,13 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "//": "SPA fallback for client routes only. Exclude /assets/ so a MISSING hashed chunk returns a real 404 instead of index.html (text/html) — serving HTML as a JS module blanks the app before React can mount.",
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
