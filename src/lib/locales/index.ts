@@ -18,6 +18,8 @@ import editReport from './editReport';
 import manage from './manage';
 import notifications from './notifications';
 import help from './help';
+import cases from './cases';
+import push from './push';
 
 /** All namespace dictionaries. Keys are exposed as `namespace.key`. */
 const NS: Record<string, NsDict> = {
@@ -40,6 +42,8 @@ const NS: Record<string, NsDict> = {
   manage,
   notifications,
   help,
+  cases,
+  push,
 };
 
 function build(loc: Locale): Record<string, string> {

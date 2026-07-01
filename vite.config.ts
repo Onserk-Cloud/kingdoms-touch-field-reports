@@ -25,7 +25,9 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        orientation: 'portrait',
+        // Allow rotation — the UI adapts to landscape (PhoneFrame letterboxes a
+        // phone-width column). iOS ignores this for installed PWAs anyway.
+        orientation: 'any',
         background_color: '#1F3D2B',
         theme_color: '#1F3D2B',
         lang: 'en',
@@ -68,6 +70,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Pull in our push/notification-click handlers on top of the
+        // Workbox-generated SW (keeps precache + runtime caching intact).
+        importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp}'],
         // Don't precache rarely-used heavy chunks on install — they'd download
         // on the very first load. They get cached on demand instead.

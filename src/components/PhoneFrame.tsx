@@ -20,31 +20,53 @@ interface PhoneFrameProps {
  */
 export function PhoneFrame({ children, dark = false, bg }: PhoneFrameProps) {
   const { colors } = useTheme();
-  const isMobile = useIsMobile();
+  const { w, h } = useViewport();
+
+  // A phone is "mobile" in BOTH orientations: its SHORT side stays small.
+  // Detecting by width alone made a rotated phone (wide but short) fall back to
+  // the desktop artboard — the app appeared to "lose its shape" in landscape.
+  const isMobile = Math.min(w, h) <= 480;
+  const landscape = w > h;
 
   const background = bg ?? (dark ? colors.forest : colors.ivory);
   const textColor = dark ? '#fff' : colors.ink;
 
   if (isMobile) {
-    // Full-bleed mobile view — let the real device chrome show through.
+    // Portrait: full-bleed. Landscape: centre a phone-width column and letterbox
+    // the sides so the layout keeps its app shape instead of stretching wide.
+    const sideBg = dark ? '#13241a' : '#ece5d3';
     return (
       <div
         style={{
           width: '100%',
           minHeight: '100svh',
-          background,
-          color: textColor,
-          position: 'relative',
-          fontFamily: 'Manrope, system-ui, sans-serif',
-          WebkitFontSmoothing: 'antialiased',
+          background: landscape ? sideBg : background,
+          display: 'flex',
+          justifyContent: 'center',
         }}
       >
-        {children}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: landscape ? 480 : undefined,
+            minHeight: '100svh',
+            background,
+            color: textColor,
+            fontFamily: 'Manrope, system-ui, sans-serif',
+            WebkitFontSmoothing: 'antialiased',
+            boxShadow: landscape ? '0 0 0 1px rgba(0,0,0,0.06)' : undefined,
+          }}
+        >
+          {children}
+        </div>
       </div>
     );
   }
 
-  // Desktop preview — 390×844 artboard with status bar + dynamic island.
+  // Desktop / tablet preview — 390×844 artboard with status bar + dynamic island,
+  // scaled down to fit short viewports (e.g. a tablet in landscape) so it never crops.
+  const scale = Math.min(1, (h - 40) / 844);
   return (
     <div
       style={{
@@ -54,12 +76,15 @@ export function PhoneFrame({ children, dark = false, bg }: PhoneFrameProps) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 20,
+        overflow: 'hidden',
       }}
     >
       <div
         style={{
           width: 390,
           height: 844,
+          transform: scale < 1 ? `scale(${scale})` : undefined,
+          transformOrigin: 'center',
           borderRadius: 44,
           overflow: 'hidden',
           position: 'relative',
@@ -79,19 +104,24 @@ export function PhoneFrame({ children, dark = false, bg }: PhoneFrameProps) {
   );
 }
 
-function useIsMobile(threshold = 480) {
-  // Initialise from the real viewport on the FIRST render so we never paint the
-  // desktop artboard and then swap to mobile (which caused a huge layout shift).
-  const [m, setM] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth <= threshold,
-  );
+function useViewport() {
+  // Track both dimensions so we can react to orientation changes (a rotated
+  // phone keeps a small short-side; a tablet in landscape has a short height).
+  const [v, setV] = useState(() => ({
+    w: typeof window !== 'undefined' ? window.innerWidth : 1024,
+    h: typeof window !== 'undefined' ? window.innerHeight : 768,
+  }));
   useEffect(() => {
-    const check = () => setM(window.innerWidth <= threshold);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, [threshold]);
-  return m;
+    const on = () => setV({ w: window.innerWidth, h: window.innerHeight });
+    on();
+    window.addEventListener('resize', on);
+    window.addEventListener('orientationchange', on);
+    return () => {
+      window.removeEventListener('resize', on);
+      window.removeEventListener('orientationchange', on);
+    };
+  }, []);
+  return v;
 }
 
 const STATUS_STYLE: CSSProperties = {

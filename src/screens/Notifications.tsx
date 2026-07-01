@@ -12,6 +12,11 @@ import {
   type KtNotification,
 } from '../lib/notifications';
 import { formatDateTime } from '../lib/format';
+import {
+  isPushSupported,
+  getPushPermission,
+  subscribeToPush,
+} from '../lib/push';
 
 function titleKey(type: string): string {
   if (type === 'reviewed') return 'notifications.reviewedTitle';
@@ -41,6 +46,35 @@ export function Notifications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [pushState, setPushState] = useState<
+    'idle' | 'enabling' | 'enabled' | 'denied' | 'unsupported' | 'error'
+  >('idle');
+
+  useEffect(() => {
+    if (!isPushSupported()) {
+      setPushState('unsupported');
+      return;
+    }
+    const perm = getPushPermission();
+    if (perm === 'granted') setPushState('enabled');
+    else if (perm === 'denied') setPushState('denied');
+    else setPushState('idle');
+  }, []);
+
+  async function enablePush() {
+    if (!me) return;
+    setPushState('enabling');
+    const res = await subscribeToPush(me.id);
+    setPushState(
+      res.status === 'granted'
+        ? 'enabled'
+        : res.status === 'denied'
+          ? 'denied'
+          : res.status === 'unsupported'
+            ? 'unsupported'
+            : 'error',
+    );
+  }
 
   useEffect(() => {
     if (!me) return;
@@ -117,6 +151,105 @@ export function Notifications() {
           padding: '16px 20px 40px',
         }}
       >
+        {pushState === 'enabled' ? (
+          <div
+            style={{
+              background: 'rgba(143,165,139,0.15)',
+              border: '1px solid rgba(143,165,139,0.4)',
+              borderRadius: 14,
+              padding: '10px 12px',
+              marginBottom: 14,
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: colors.forestSoft,
+            }}
+          >
+            ✓ {t('push.enabled')}
+          </div>
+        ) : pushState !== 'unsupported' ? (
+          <div
+            style={{
+              background: '#fff',
+              border: `1px solid ${colors.line}`,
+              borderRadius: 16,
+              padding: 14,
+              marginBottom: 14,
+            }}
+          >
+            <div
+              style={{ fontSize: 14, fontWeight: 700, color: colors.charcoal }}
+            >
+              {t('push.enableTitle')}
+            </div>
+            <div
+              style={{
+                fontSize: 12.5,
+                color: colors.muted,
+                marginTop: 3,
+                fontWeight: 500,
+                lineHeight: 1.35,
+              }}
+            >
+              {t('push.enableSub')}
+            </div>
+            {pushState === 'denied' ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: '#A04A2E',
+                  marginTop: 8,
+                  fontWeight: 600,
+                }}
+              >
+                {t('push.denied')}
+              </div>
+            ) : (
+              <button
+                onClick={() => void enablePush()}
+                disabled={pushState === 'enabling'}
+                className="kt-tap"
+                style={{
+                  marginTop: 10,
+                  height: 44,
+                  padding: '0 16px',
+                  borderRadius: 12,
+                  background: colors.forest,
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: 13.5,
+                  cursor: 'pointer',
+                }}
+              >
+                {pushState === 'enabling'
+                  ? t('push.enabling')
+                  : t('push.enable')}
+              </button>
+            )}
+            {pushState === 'error' && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: '#A04A2E',
+                  marginTop: 8,
+                  fontWeight: 600,
+                }}
+              >
+                {t('push.error')}
+              </div>
+            )}
+            <div
+              style={{
+                fontSize: 11,
+                color: colors.muted,
+                marginTop: 8,
+                fontWeight: 500,
+              }}
+            >
+              {t('push.iosHint')}
+            </div>
+          </div>
+        ) : null}
+
         {loading && (
           <div
             style={{ textAlign: 'center', color: colors.muted, padding: 24 }}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
 import { Field } from '../components/Field';
@@ -13,6 +13,7 @@ import { useGeolocation } from '../lib/geo';
 import { compressPhoto } from '../lib/compress';
 import { ktStore } from '../lib/offline-store';
 import { formatGps } from '../lib/format';
+import { getCase } from '../lib/cases';
 import { useI18n } from '../lib/i18n';
 
 export function NewReport() {
@@ -25,6 +26,29 @@ export function NewReport() {
   const { state: gps, capture } = useGeolocation(true);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [saving, setSaving] = useState(false);
+  const [searchParams] = useSearchParams();
+  const caseId = searchParams.get('case');
+  const [caseLabel, setCaseLabel] = useState<string | null>(null);
+
+  // Arrived from an assigned case → prefill job type + location (only when the
+  // draft fields are still empty, so we never clobber in-progress edits).
+  useEffect(() => {
+    if (!caseId) return;
+    let active = true;
+    void (async () => {
+      const c = await getCase(caseId);
+      if (!active || !c) return;
+      setCaseLabel(c.jobType);
+      setDraft({
+        jobType: draft.jobType || c.jobType,
+        location: draft.location || c.location || '',
+      });
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]);
 
   // Sync GPS into the draft store when ready. Depend on the STABLE setter
   // (not the whole store object) — depending on `draft` here re-fires the
@@ -151,6 +175,23 @@ export function NewReport() {
           background: colors.ivory,
         }}
       >
+        {caseLabel && (
+          <div
+            style={{
+              background: 'rgba(196,152,76,0.12)',
+              border: `1px solid rgba(196,152,76,0.35)`,
+              borderRadius: 14,
+              padding: '10px 12px',
+              marginBottom: 14,
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: colors.goldDeep,
+            }}
+          >
+            {t('cases.workingOnCase', { job: caseLabel })}
+          </div>
+        )}
+
         {/* GPS card */}
         <GpsCard state={gps} onRetry={capture} />
 

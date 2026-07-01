@@ -6,3 +6,6 @@ verify_jwt = false  # this function is the *gateway* to JWTs; it cannot itself r
 
 [functions.admin-users]
 verify_jwt = true  # requires a staff JWT; the function also checks admin/super_admin role
+
+[functions.send-push]
+verify_jwt = false  # called server-to-server by the DB trigger (pg_net) with the service key in the Authorization header

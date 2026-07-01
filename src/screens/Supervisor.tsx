@@ -419,6 +419,29 @@ export function Supervisor() {
           </div>
         </div>
 
+        <button
+          onClick={() => navigate('/cases')}
+          className="kt-tap"
+          style={{
+            width: '100%',
+            marginTop: 8,
+            height: 52,
+            borderRadius: 16,
+            background: colors.forest,
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: 14,
+            letterSpacing: 0.2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            cursor: 'pointer',
+          }}
+        >
+          {t('cases.manageTitle')}
+        </button>
+
         {employees.length > 0 && (
           <div
             style={{

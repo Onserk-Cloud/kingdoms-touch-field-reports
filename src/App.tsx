@@ -49,6 +49,15 @@ const Profile = lazy(() =>
 const Help = lazy(() =>
   import('./screens/Help').then((m) => ({ default: m.Help })),
 );
+const ManageCases = lazy(() =>
+  import('./screens/ManageCases').then((m) => ({ default: m.ManageCases })),
+);
+const CreateCase = lazy(() =>
+  import('./screens/CreateCase').then((m) => ({ default: m.CreateCase })),
+);
+const CaseDetail = lazy(() =>
+  import('./screens/CaseDetail').then((m) => ({ default: m.CaseDetail })),
+);
 
 /** Brief neutral screen shown while a route chunk loads. */
 function RouteFallback() {
@@ -182,6 +191,32 @@ export function App() {
           element={
             <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
               <SupervisorDetail />
+            </RequireAuth>
+          }
+        />
+
+        {/* Cases — staff create/assign & manage; employees open their assigned ones */}
+        <Route
+          path="/cases"
+          element={
+            <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
+              <ManageCases />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/cases/new"
+          element={
+            <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
+              <CreateCase />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/cases/:id"
+          element={
+            <RequireAuth>
+              <CaseDetail />
             </RequireAuth>
           }
         />
