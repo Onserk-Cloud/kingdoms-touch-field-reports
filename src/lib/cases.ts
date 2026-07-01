@@ -515,3 +515,98 @@ export async function deleteCasePhoto(photo: CasePhoto): Promise<void> {
 export function getCasePhotoUrl(path: string): Promise<string | null> {
   return getPhotoUrl(path, 3600, CASE_BUCKET);
 }
+
+// ─── Case activity timeline + comments ──────────────────────────────────────
+
+export type CaseActivityKind =
+  | 'comment'
+  | 'status'
+  | 'assigned'
+  | 'created'
+  | 'submitted'
+  | 'reopened';
+
+export interface CaseActivity {
+  id: string;
+  caseId: string;
+  actorId: string | null;
+  actorName: string | null;
+  kind: CaseActivityKind;
+  body: string | null;
+  meta: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+/** Demo-mode in-memory activity, keyed by case id. */
+const DEMO_ACTIVITY: Record<string, CaseActivity[]> = {};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToActivity(r: any): CaseActivity {
+  return {
+    id: r.id as string,
+    caseId: r.case_id as string,
+    actorId: (r.actor_id ?? null) as string | null,
+    actorName: (r.actor?.name ?? null) as string | null,
+    kind: r.kind as CaseActivityKind,
+    body: (r.body ?? null) as string | null,
+    meta: (r.meta ?? null) as Record<string, unknown> | null,
+    createdAt: r.created_at as string,
+  };
+}
+
+/** Full timeline for a case (events + comments), oldest first. */
+export async function listCaseActivity(caseId: string): Promise<CaseActivity[]> {
+  if (!HAS_SUPABASE) return DEMO_ACTIVITY[caseId] ?? [];
+  try {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('case_activity')
+      .select('id, case_id, actor_id, kind, body, meta, created_at, actor:employees!actor_id(name)')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(rowToActivity);
+  } catch (err) {
+    console.error('[KT] listCaseActivity failed', err);
+    return [];
+  }
+}
+
+/** Post a comment to a case timeline. */
+export async function addCaseComment(
+  caseId: string,
+  actorId: string,
+  body: string,
+): Promise<CaseActivity | null> {
+  const text = body.trim();
+  if (!text) return null;
+
+  if (!HAS_SUPABASE) {
+    const entry: CaseActivity = {
+      id: 'c-' + Math.random().toString(36).slice(2),
+      caseId,
+      actorId,
+      actorName: 'You',
+      kind: 'comment',
+      body: text,
+      meta: null,
+      createdAt: new Date().toISOString(),
+    };
+    DEMO_ACTIVITY[caseId] = [...(DEMO_ACTIVITY[caseId] ?? []), entry];
+    return entry;
+  }
+
+  try {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('case_activity')
+      .insert({ case_id: caseId, actor_id: actorId, kind: 'comment', body: text })
+      .select('id, case_id, actor_id, kind, body, meta, created_at, actor:employees!actor_id(name)')
+      .single();
+    if (error) throw error;
+    return data ? rowToActivity(data) : null;
+  } catch (err) {
+    console.error('[KT] addCaseComment failed', err);
+    return null;
+  }
+}

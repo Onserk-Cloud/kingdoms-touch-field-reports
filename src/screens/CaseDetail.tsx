@@ -14,14 +14,18 @@ import {
   claimCase,
   caseStatusBadge,
   caseStatusKey,
+  priorityColor,
   listCasePhotos,
   uploadCasePhoto,
   deleteCasePhoto,
   getCasePhotoUrl,
+  listCaseActivity,
+  addCaseComment,
   type Case,
   type CasePhoto,
+  type CaseActivity,
 } from '../lib/cases';
-import { formatDate } from '../lib/format';
+import { formatDate, formatDateTime, initialsOf } from '../lib/format';
 
 function isStaff(role?: string): boolean {
   return ['supervisor', 'admin', 'super_admin'].includes(role ?? '');
@@ -69,6 +73,7 @@ export function CaseDetail() {
     try {
       const updated = await claimCase(caseData.id, employee.id);
       if (updated) setCaseData(updated);
+      void loadActivity();
     } finally {
       setUpdating(false);
     }
@@ -87,6 +92,7 @@ export function CaseDetail() {
         setCaseData(updated);
         setReviewNote('');
       }
+      void loadActivity();
     } finally {
       setUpdating(false);
     }
@@ -131,6 +137,35 @@ export function CaseDetail() {
   async function handleRemovePhoto(p: CasePhoto) {
     await deleteCasePhoto(p);
     await loadPhotos();
+  }
+
+  const [activity, setActivity] = useState<CaseActivity[]>([]);
+  const [comment, setComment] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
+
+  useEffect(() => {
+    void loadActivity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  async function loadActivity() {
+    if (!id) return;
+    const list = await listCaseActivity(id);
+    setActivity(list);
+  }
+
+  async function handlePostComment() {
+    if (!id || !employee || !comment.trim()) return;
+    setPostingComment(true);
+    try {
+      const entry = await addCaseComment(id, employee.id, comment);
+      if (entry) {
+        setComment('');
+        await loadActivity();
+      }
+    } finally {
+      setPostingComment(false);
+    }
   }
 
   const isAssigned = caseData?.assignedTo === employee?.id;
@@ -267,16 +302,13 @@ export function CaseDetail() {
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color:
-                    caseData.priority === 'high'
-                      ? '#A04A2E'
-                      : caseData.priority === 'low'
-                        ? colors.muted
-                        : colors.gold,
+                  color: priorityColor(caseData.priority, colors),
                   textTransform: 'uppercase',
                 }}
               >
-                {caseData.priority}
+                {t(
+                  `cases.priority${caseData.priority[0].toUpperCase()}${caseData.priority.slice(1)}`,
+                )}
               </div>
             </div>
 
@@ -558,6 +590,203 @@ export function CaseDetail() {
             )}
           </div>
         )}
+
+        {/* ─── Activity timeline + comments ─────────────────────────── */}
+        <div
+          style={{
+            background: '#fff',
+            borderRadius: 16,
+            padding: 16,
+            border: `1px solid ${colors.line}`,
+            marginTop: 16,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: colors.goldDeep,
+              letterSpacing: 0.8,
+              textTransform: 'uppercase',
+              marginBottom: 12,
+            }}
+          >
+            {t('cases.activityTitle')}
+          </div>
+
+          {activity.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: colors.muted, marginBottom: 4 }}>
+              {t('cases.activityEmpty')}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {activity.map((a) =>
+                a.kind === 'comment' ? (
+                  <div key={a.id} style={{ display: 'flex', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: '50%',
+                        background: colors.forest,
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {initialsOf(a.actorName ?? t('cases.system'))}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'baseline',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            color: colors.charcoal,
+                          }}
+                        >
+                          {a.actorName ?? t('cases.system')}
+                        </span>
+                        <span
+                          style={{ fontSize: 10.5, color: colors.muted, flexShrink: 0 }}
+                        >
+                          {formatDateTime(a.createdAt)}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: colors.charcoal,
+                          lineHeight: 1.4,
+                          marginTop: 2,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {a.body}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={a.id}
+                    style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}
+                  >
+                    <div
+                      style={{
+                        width: 30,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        paddingTop: 3,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: colors.gold,
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 12.5,
+                          color: colors.charcoal,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {a.kind === 'status'
+                          ? t('cases.evtStatus', {
+                              status: t(
+                                caseStatusKey(String(a.meta?.to) as Case['status']),
+                              ),
+                            })
+                          : a.kind === 'created'
+                            ? t('cases.evtCreated')
+                            : a.kind === 'assigned'
+                              ? t('cases.evtAssigned')
+                              : a.kind === 'submitted'
+                                ? t('cases.evtSubmitted')
+                                : t('cases.evtReopened')}
+                        {a.body ? ` — ${a.body}` : ''}
+                      </span>
+                      <span
+                        style={{ fontSize: 10.5, color: colors.muted, flexShrink: 0 }}
+                      >
+                        {formatDateTime(a.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+
+          {(isStaffMember || isAssigned) && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder={t('cases.commentPlaceholder')}
+                className="kt-input"
+                rows={1}
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  border: `1px solid ${colors.line}`,
+                  fontSize: 13,
+                  fontFamily: 'Manrope',
+                  minHeight: 42,
+                  resize: 'none',
+                }}
+              />
+              <button
+                onClick={() => void handlePostComment()}
+                disabled={postingComment || !comment.trim()}
+                className="kt-tap"
+                style={{
+                  alignSelf: 'stretch',
+                  padding: '0 16px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background:
+                    postingComment || !comment.trim() ? colors.line : colors.forest,
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  cursor: comment.trim() ? 'pointer' : 'default',
+                }}
+              >
+                {postingComment ? t('cases.commentPosting') : t('cases.commentPost')}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </PhoneFrame>
   );
