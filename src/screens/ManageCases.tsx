@@ -25,7 +25,9 @@ export function ManageCases() {
 
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<Case['status'] | 'all'>('all');
+  const [filter, setFilter] = useState<
+    Case['status'] | 'all' | 'open' | 'overdue' | 'high'
+  >('all');
 
   useEffect(() => {
     void load();
@@ -56,7 +58,15 @@ export function ManageCases() {
     [cases],
   );
 
-  const visible = cases.filter((c) => filter === 'all' || c.status === filter);
+  const visible = cases.filter((c) => {
+    if (filter === 'all') return true;
+    if (filter === 'open') return c.status !== 'closed';
+    if (filter === 'overdue')
+      return c.status !== 'closed' && !!c.dueDate && c.dueDate < todayStr();
+    if (filter === 'high')
+      return c.status !== 'closed' && c.priority === 'high';
+    return c.status === filter;
+  });
 
   return (
     <PhoneFrame bg={colors.ivory}>
@@ -150,18 +160,26 @@ export function ManageCases() {
             label={t('cases.summaryOpen')}
             tint={colors.forest}
             colors={colors}
+            active={filter === 'open'}
+            onClick={() => setFilter((f) => (f === 'open' ? 'all' : 'open'))}
           />
           <SummaryStat
             n={summary.overdue}
             label={t('cases.summaryOverdue')}
             tint="#A04A2E"
             colors={colors}
+            active={filter === 'overdue'}
+            onClick={() =>
+              setFilter((f) => (f === 'overdue' ? 'all' : 'overdue'))
+            }
           />
           <SummaryStat
             n={summary.high}
             label={t('cases.summaryHigh')}
             tint={colors.goldDeep}
             colors={colors}
+            active={filter === 'high'}
+            onClick={() => setFilter((f) => (f === 'high' ? 'all' : 'high'))}
           />
         </div>
 
@@ -250,20 +268,39 @@ function SummaryStat({
   label,
   tint,
   colors,
+  onClick,
+  active,
 }: {
   n: number;
   label: string;
   tint: string;
   colors: { line: string; muted: string };
+  onClick?: () => void;
+  active?: boolean;
 }) {
   return (
     <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      className={onClick ? 'kt-tap' : undefined}
       style={{
         flex: 1,
         padding: '12px 10px',
         background: '#fff',
         borderRadius: 14,
-        border: `1px solid ${colors.line}`,
+        border: `1.5px solid ${active ? tint : colors.line}`,
+        cursor: onClick ? 'pointer' : 'default',
       }}
     >
       <div

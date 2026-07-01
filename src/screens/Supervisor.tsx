@@ -287,16 +287,30 @@ export function Supervisor() {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <Stat n={counts.today} label={t('supervisor.statToday')} dark />
+          <Stat
+            n={counts.today}
+            label={t('supervisor.statToday')}
+            dark
+            active={filter === 'all'}
+            onClick={() => setFilter('all')}
+          />
           <Stat
             n={counts.pending}
             label={t('supervisor.statPending')}
             tint={colors.goldDeep}
+            active={filter === 'pending'}
+            onClick={() =>
+              setFilter((f) => (f === 'pending' ? 'all' : 'pending'))
+            }
           />
           <Stat
             n={counts.flagged}
             label={t('supervisor.statNeedsUpdate')}
             tint="#A04A2E"
+            active={filter === 'flagged'}
+            onClick={() =>
+              setFilter((f) => (f === 'flagged' ? 'all' : 'flagged'))
+            }
           />
         </div>
 
@@ -769,24 +783,45 @@ function Stat({
   label,
   tint,
   dark,
+  onClick,
+  active,
 }: {
   n: number;
   label: string;
   tint?: string;
   dark?: boolean;
+  onClick?: () => void;
+  active?: boolean;
 }) {
   const { colors } = useTheme();
   return (
     <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      className={onClick ? 'kt-tap' : undefined}
       style={{
         flex: 1,
         padding: 14,
         borderRadius: 16,
         background: dark ? colors.forest : '#fff',
         color: dark ? '#fff' : colors.charcoal,
-        border: `1px solid ${dark ? 'transparent' : colors.line}`,
+        border: `1.5px solid ${
+          active ? (tint ?? colors.gold) : dark ? 'transparent' : colors.line
+        }`,
         position: 'relative',
         overflow: 'hidden',
+        cursor: onClick ? 'pointer' : 'default',
       }}
     >
       {dark && (

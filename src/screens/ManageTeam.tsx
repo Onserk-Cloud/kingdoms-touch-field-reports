@@ -168,7 +168,14 @@ export function ManageTeam() {
         .from('employees')
         .select('id, name, role, active, initials, avatar_color')
         .order('created_at', { ascending: true });
-      setList((data ?? []) as Member[]);
+      const rows = (data ?? []) as Member[];
+      // Only a super admin can see other super admins — to everyone else
+      // (admins included) that role stays invisible in the roster.
+      setList(
+        me?.role === 'super_admin'
+          ? rows
+          : rows.filter((m) => m.role !== 'super_admin'),
+      );
     } finally {
       setLoading(false);
     }
