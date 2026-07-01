@@ -57,6 +57,20 @@ body {
   touch-action: manipulation;
 }
 
+/* touch-action does NOT inherit, so the body rule doesn't reach buttons/inputs.
+   Apply it to every interactive element so double-tap-to-zoom never fires
+   (e.g. tapping PIN keys fast) while pinch-zoom stays available for a11y. */
+button,
+a,
+input,
+textarea,
+select,
+label,
+[role='button'],
+.kt-tap {
+  touch-action: manipulation;
+}
+
 /* No long-press text selection / iOS copy-callout on UI chrome.
    Real text entry (inputs/textareas) stays selectable below. */
 body {
@@ -117,6 +131,12 @@ input[type='number'] {
 
 .kt-scroll::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes kt-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Tap animation helper */

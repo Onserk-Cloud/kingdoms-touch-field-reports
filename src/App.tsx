@@ -64,7 +64,29 @@ const EditCase = lazy(() =>
 
 /** Brief neutral screen shown while a route chunk loads. */
 function RouteFallback() {
-  return <div style={{ position: 'fixed', inset: 0, background: '#F7F3E8' }} />;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: '#F7F3E8',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: '50%',
+          border: '3px solid rgba(31,61,43,0.15)',
+          borderTopColor: '#1F3D2B',
+          animation: 'kt-spin 0.8s linear infinite',
+        }}
+      />
+    </div>
+  );
 }
 
 export function App() {

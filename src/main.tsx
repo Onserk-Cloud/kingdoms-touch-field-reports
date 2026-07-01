@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from './theme-context';
 import { I18nProvider } from './lib/i18n';
 import { App } from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { installAutoFlush } from './lib/offline-store';
 import { uploadReport } from './lib/uploader';
 import { HAS_SUPABASE } from './lib/supabase';
@@ -54,14 +55,16 @@ if (!rootEl) throw new Error('Missing #root');
 
 createRoot(rootEl).render(
   <StrictMode>
-    <BrowserRouter
-      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-    >
-      <I18nProvider>
-        <ThemeProvider>
-          <App />
-        </ThemeProvider>
-      </I18nProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <I18nProvider>
+          <ThemeProvider>
+            <App />
+          </ThemeProvider>
+        </I18nProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>,
 );
