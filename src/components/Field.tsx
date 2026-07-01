@@ -10,7 +10,7 @@ interface FieldProps {
   hint?: string;
   onChange?: (v: string) => void;
   rightSlot?: ReactNode;
-  type?: 'text' | 'email' | 'tel' | 'date' | 'number';
+  type?: 'text' | 'email' | 'tel' | 'date' | 'number' | 'time';
   readonly?: boolean;
 }
 

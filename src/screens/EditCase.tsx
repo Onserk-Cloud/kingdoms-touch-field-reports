@@ -112,6 +112,8 @@ export function EditCase() {
             location: caseData.location,
             priority: caseData.priority,
             dueDate: caseData.dueDate,
+            dueTime: caseData.dueTime,
+            remind: caseData.remind,
             instructions: caseData.instructions,
             assignedTo: caseData.assignedTo,
           }}

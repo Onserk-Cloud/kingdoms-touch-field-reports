@@ -302,6 +302,7 @@ export function CaseDetail() {
                   }}
                 >
                   {formatDate(new Date(caseData.dueDate).getTime())}
+                  {caseData.dueTime ? ` · ${caseData.dueTime}` : ''}
                 </div>
               </div>
             )}

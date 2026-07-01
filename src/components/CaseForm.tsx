@@ -21,10 +21,12 @@ export function CaseForm({ initial, submitting, submitLabel, onSubmit }: CaseFor
   const [jobType, setJobType] = useState(initial?.jobType ?? '');
   const [clientOrSite, setClientOrSite] = useState(initial?.clientOrSite ?? '');
   const [location, setLocation] = useState(initial?.location ?? '');
-  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>(
+  const [priority, setPriority] = useState<'urgent' | 'high' | 'medium' | 'low'>(
     initial?.priority ?? 'medium',
   );
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? '');
+  const [dueTime, setDueTime] = useState(initial?.dueTime ?? '');
+  const [remind, setRemind] = useState(initial?.remind ?? true);
   const [instructions, setInstructions] = useState(initial?.instructions ?? '');
   const [assignedTo, setAssignedTo] = useState<string | null>(initial?.assignedTo ?? null);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -73,6 +75,8 @@ export function CaseForm({ initial, submitting, submitLabel, onSubmit }: CaseFor
       location: location.trim(),
       priority,
       dueDate: dueDate || null,
+      dueTime: dueTime || null,
+      remind,
       instructions: instructions.trim() || null,
       assignedTo: assignedTo || undefined,
     };
@@ -116,34 +120,110 @@ export function CaseForm({ initial, submitting, submitLabel, onSubmit }: CaseFor
           {t('cases.priorityLabel')}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {(['low', 'medium', 'high'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPriority(p)}
-              className="kt-tap"
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                borderRadius: 10,
-                fontSize: 12,
-                fontWeight: 700,
-                border: `1.5px solid ${priority === p ? colors.gold : colors.line}`,
-                background: '#fff',
-                color: priority === p ? colors.forest : colors.muted,
-              }}
-            >
-              {t(`cases.priority${p[0].toUpperCase()}${p.slice(1)}`)}
-            </button>
-          ))}
+          {(['low', 'medium', 'high', 'urgent'] as const).map((p) => {
+            const on = priority === p;
+            const accent = p === 'urgent' ? '#B53D2E' : colors.forest;
+            return (
+              <button
+                key={p}
+                onClick={() => setPriority(p)}
+                className="kt-tap"
+                style={{
+                  flex: 1,
+                  padding: '8px 4px',
+                  borderRadius: 10,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  border: `1.5px solid ${on ? accent : colors.line}`,
+                  background: on ? accent : '#fff',
+                  color: on ? '#fff' : colors.muted,
+                }}
+              >
+                {t(`cases.priority${p[0].toUpperCase()}${p.slice(1)}`)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <Field
-        label={t('cases.dueDateLabel')}
-        type="date"
-        value={dueDate}
-        onChange={setDueDate}
-      />
+      <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <Field
+            label={t('cases.dueDateLabel')}
+            type="date"
+            value={dueDate}
+            onChange={setDueDate}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Field
+            label={t('cases.dueTimeLabel')}
+            type="time"
+            value={dueTime}
+            onChange={setDueTime}
+          />
+        </div>
+      </div>
+
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: '#fff',
+          borderRadius: 14,
+          padding: 14,
+          border: `1px solid ${colors.line}`,
+          marginBottom: 16,
+          cursor: 'pointer',
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: colors.charcoal }}>
+            {t('cases.reminderLabel')}
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              color: colors.muted,
+              marginTop: 1,
+              fontWeight: 500,
+            }}
+          >
+            {t('cases.reminderSub')}
+          </div>
+        </div>
+        <input
+          type="checkbox"
+          checked={remind}
+          onChange={(e) => setRemind(e.target.checked)}
+          style={{ display: 'none' }}
+        />
+        <div
+          style={{
+            width: 46,
+            height: 27,
+            borderRadius: 999,
+            background: remind ? colors.forest : colors.line,
+            position: 'relative',
+            flexShrink: 0,
+            transition: 'background 140ms',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: 3,
+              [remind ? 'right' : 'left']: 3,
+              width: 21,
+              height: 21,
+              borderRadius: '50%',
+              background: '#fff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+            }}
+          />
+        </div>
+      </label>
 
       <Field
         label={t('cases.instructionsLabel')}

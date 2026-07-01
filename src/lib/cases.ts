@@ -10,8 +10,10 @@ export interface Case {
   jobType: string;
   clientOrSite: string | null;
   location: string | null;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'urgent' | 'high' | 'medium' | 'low';
   dueDate: string | null;
+  dueTime: string | null;
+  remind: boolean;
   instructions: string | null;
   assignmentGroup: string | null;
   status: 'available' | 'assigned' | 'in_progress' | 'submitted' | 'needs_changes' | 'closed';
@@ -33,6 +35,8 @@ const DEMO_CASES: Case[] = [
     location: '123 Main St',
     priority: 'high',
     dueDate: null,
+    dueTime: null,
+    remind: true,
     instructions: 'Check all units and report status',
     assignmentGroup: null,
     status: 'available',
@@ -51,8 +55,10 @@ function rowToCase(row: any): Case {
     jobType: row.job_type as string,
     clientOrSite: row.client_or_site as string | null,
     location: row.location as string | null,
-    priority: row.priority as 'high' | 'medium' | 'low',
+    priority: row.priority as Case['priority'],
     dueDate: row.due_date as string | null,
+    dueTime: (row.due_time ?? null) as string | null,
+    remind: (row.remind ?? true) as boolean,
     instructions: row.instructions as string | null,
     assignmentGroup: row.assignment_group as string | null,
     status: row.status as Case['status'],
@@ -139,8 +145,10 @@ export interface CreateCaseInput {
   jobType: string;
   clientOrSite?: string | null;
   location?: string | null;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'urgent' | 'high' | 'medium' | 'low';
   dueDate?: string | null;
+  dueTime?: string | null;
+  remind?: boolean;
   instructions?: string | null;
   assignedTo?: string | null;
 }
@@ -163,6 +171,8 @@ export async function createCase(
       location: input.location ?? null,
       priority: input.priority,
       dueDate: input.dueDate ?? null,
+      dueTime: input.dueTime ?? null,
+      remind: input.remind ?? true,
       instructions: input.instructions ?? null,
       assignmentGroup: null,
       status: input.assignedTo ? 'assigned' : 'available',
@@ -188,6 +198,8 @@ export async function createCase(
         location: input.location ?? null,
         priority: input.priority,
         due_date: input.dueDate ?? null,
+        due_time: input.dueTime ?? null,
+        remind: input.remind ?? true,
         instructions: input.instructions ?? null,
         status: input.assignedTo ? 'assigned' : 'available',
       })
@@ -313,6 +325,8 @@ export async function updateCase(
       if (patch.location !== undefined) c.location = patch.location ?? null;
       if (patch.priority !== undefined) c.priority = patch.priority;
       if (patch.dueDate !== undefined) c.dueDate = patch.dueDate ?? null;
+      if (patch.dueTime !== undefined) c.dueTime = patch.dueTime ?? null;
+      if (patch.remind !== undefined) c.remind = patch.remind ?? true;
       if (patch.instructions !== undefined) c.instructions = patch.instructions ?? null;
       if (patch.assignedTo !== undefined) c.assignedTo = patch.assignedTo ?? null;
     }
@@ -326,6 +340,8 @@ export async function updateCase(
     if (patch.location !== undefined) row.location = patch.location ?? null;
     if (patch.priority !== undefined) row.priority = patch.priority;
     if (patch.dueDate !== undefined) row.due_date = patch.dueDate ?? null;
+    if (patch.dueTime !== undefined) row.due_time = patch.dueTime ?? null;
+    if (patch.remind !== undefined) row.remind = patch.remind ?? true;
     if (patch.instructions !== undefined) row.instructions = patch.instructions ?? null;
     if (patch.assignedTo !== undefined) {
       row.assigned_to = patch.assignedTo ?? null;
@@ -357,7 +373,7 @@ export const CASE_STATUS_ORDER: Case['status'][] = [
   'closed',
 ];
 
-export const CASE_PRIORITIES = ['high', 'medium', 'low'] as const;
+export const CASE_PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const;
 
 /** Map a case status to a Badge kind (used by every card/detail). */
 export function caseStatusBadge(status: Case['status']): BadgeKind {
@@ -389,6 +405,7 @@ export function priorityColor(
   priority: Case['priority'],
   colors: { gold: string; muted: string; danger?: string },
 ): string {
+  if (priority === 'urgent') return '#B53D2E';
   if (priority === 'high') return colors.danger ?? '#A04A2E';
   if (priority === 'low') return colors.muted;
   return colors.gold;
