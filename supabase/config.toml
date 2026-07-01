@@ -9,3 +9,6 @@ verify_jwt = true  # requires a staff JWT; the function also checks admin/super_
 
 [functions.send-push]
 verify_jwt = false  # called server-to-server by the DB trigger (pg_net) with the service key in the Authorization header
+
+[functions.run-due-check]
+verify_jwt = false  # invoked daily by a GitHub Action; runs the idempotent due-date check with its own service key

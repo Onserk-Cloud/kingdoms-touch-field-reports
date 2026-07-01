@@ -6,6 +6,7 @@ const dict: NsDict = {
     new: 'New',
     profile: 'Profile',
     overview: 'Overview',
+    cases: 'Cases',
     settings: 'Settings',
   },
   es: {
@@ -14,6 +15,7 @@ const dict: NsDict = {
     new: 'Nuevo',
     profile: 'Perfil',
     overview: 'Resumen',
+    cases: 'Casos',
     settings: 'Ajustes',
   },
 };

@@ -18,8 +18,8 @@ export default defineConfig({
       injectRegister: false,
       includeAssets: ['icons/*.png'],
       manifest: {
-        name: 'Kingdoms Touch Services · Field Reports',
-        short_name: 'KT Reports',
+        name: 'Kingdoms Touch',
+        short_name: 'Kingdoms Touch',
         description:
           'Capture photos, GPS and completion reports in the field. Works offline.',
         start_url: '/',

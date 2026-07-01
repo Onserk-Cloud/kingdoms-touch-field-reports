@@ -19,6 +19,7 @@ export interface KtNotification {
   id: string;
   type: 'new_report' | 'reviewed' | 'needs_update' | string;
   reportId: string | null;
+  caseId: string | null;
   refLabel: string | null;
   note: string | null;
   read: boolean;
@@ -32,13 +33,14 @@ export async function listNotifications(
     const sb = getSupabase();
     const { data } = await sb
       .from('notifications')
-      .select('id, type, report_id, ref_label, note, read, created_at')
+      .select('id, type, report_id, case_id, ref_label, note, read, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
     return (data ?? []).map((n: Record<string, unknown>) => ({
       id: n.id as string,
       type: n.type as string,
       reportId: (n.report_id as string) ?? null,
+      caseId: (n.case_id as string) ?? null,
       refLabel: (n.ref_label as string) ?? null,
       note: (n.note as string) ?? null,
       read: Boolean(n.read),
@@ -50,6 +52,7 @@ export async function listNotifications(
     id: n.id,
     type: n.type,
     reportId: n.reportId,
+    caseId: null,
     refLabel: n.refLabel ?? null,
     note: n.note ?? null,
     read: n.read,

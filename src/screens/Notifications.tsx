@@ -21,20 +21,28 @@ import {
 function titleKey(type: string): string {
   if (type === 'reviewed') return 'notifications.reviewedTitle';
   if (type === 'needs_update') return 'notifications.needsUpdateTitle';
+  if (type === 'case_assigned') return 'notifications.caseAssignedTitle';
+  if (type === 'case_needs_changes') return 'notifications.caseNeedsChangesTitle';
+  if (type === 'case_due_soon') return 'notifications.caseDueSoonTitle';
   return 'notifications.newReportTitle';
 }
 
 function bodyKey(type: string): string {
   if (type === 'reviewed') return 'notifications.reviewedBody';
   if (type === 'needs_update') return 'notifications.needsUpdateBody';
+  if (type === 'case_assigned') return 'notifications.caseAssignedBody';
+  if (type === 'case_needs_changes') return 'notifications.caseNeedsChangesBody';
+  if (type === 'case_due_soon') return 'notifications.caseDueSoonBody';
   return 'notifications.newReportBody';
 }
 
 function tint(type: string): string {
   if (type === 'reviewed') return '#1F3D2B';
-  if (type === 'needs_update') return '#A04A2E';
+  if (type === 'needs_update' || type === 'case_needs_changes') return '#A04A2E';
   return '#C4984C';
 }
+
+const NOTE_TYPES = ['needs_update', 'case_needs_changes'];
 
 export function Notifications() {
   const { colors } = useTheme();
@@ -97,6 +105,10 @@ export function Notifications() {
       setItems((prev) =>
         prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)),
       );
+    }
+    if (n.caseId) {
+      navigate(`/cases/${n.caseId}`);
+      return;
     }
     if (!n.reportId) return;
     const staff = me && me.role !== 'employee';
@@ -365,7 +377,7 @@ export function Notifications() {
                 }}
               >
                 {n.refLabel ? `${n.refLabel} — ` : ''}
-                {n.type === 'needs_update' && n.note
+                {NOTE_TYPES.includes(n.type) && n.note
                   ? n.note
                   : t(bodyKey(n.type))}
               </div>

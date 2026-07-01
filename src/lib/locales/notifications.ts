@@ -12,6 +12,12 @@ const dict: NsDict = {
     newReportBody: 'A field report is waiting for your review.',
     reviewedBody: 'Your report was approved.',
     needsUpdateBody: 'Your reviewer asked for changes.',
+    caseAssignedTitle: 'New case assigned',
+    caseAssignedBody: 'A case was assigned to you.',
+    caseNeedsChangesTitle: 'Case needs changes',
+    caseNeedsChangesBody: 'Your reviewer asked for changes on a case.',
+    caseDueSoonTitle: 'Case due soon',
+    caseDueSoonBody: 'A case is due soon — please complete it.',
   },
   es: {
     title: 'Notificaciones',
@@ -24,6 +30,12 @@ const dict: NsDict = {
     newReportBody: 'Un reporte de campo espera tu revisión.',
     reviewedBody: 'Tu reporte fue aprobado.',
     needsUpdateBody: 'Tu revisor pidió cambios.',
+    caseAssignedTitle: 'Nuevo caso asignado',
+    caseAssignedBody: 'Te asignaron un caso.',
+    caseNeedsChangesTitle: 'El caso necesita cambios',
+    caseNeedsChangesBody: 'Tu revisor pidió cambios en un caso.',
+    caseDueSoonTitle: 'Caso por vencer',
+    caseDueSoonBody: 'Un caso está por vencer — complétalo pronto.',
   },
 };
 

@@ -1,4 +1,7 @@
 ﻿import { HAS_SUPABASE, getSupabase } from './supabase';
+import { compressPhoto } from './compress';
+import { getPhotoUrl } from './uploader';
+import type { BadgeKind } from '../components/Badge';
 
 export interface Case {
   id: string;
@@ -295,4 +298,203 @@ export async function setCaseStatus(
     console.error('[KT] setCaseStatus failed', err);
     return null;
   }
+}
+
+/** Update an existing case's editable fields (staff). */
+export async function updateCase(
+  id: string,
+  patch: Partial<CreateCaseInput>,
+): Promise<Case | null> {
+  if (!HAS_SUPABASE) {
+    const c = DEMO_CASES.find((x) => x.id === id);
+    if (c) {
+      if (patch.jobType !== undefined) c.jobType = patch.jobType;
+      if (patch.clientOrSite !== undefined) c.clientOrSite = patch.clientOrSite ?? null;
+      if (patch.location !== undefined) c.location = patch.location ?? null;
+      if (patch.priority !== undefined) c.priority = patch.priority;
+      if (patch.dueDate !== undefined) c.dueDate = patch.dueDate ?? null;
+      if (patch.instructions !== undefined) c.instructions = patch.instructions ?? null;
+      if (patch.assignedTo !== undefined) c.assignedTo = patch.assignedTo ?? null;
+    }
+    return c ?? null;
+  }
+  try {
+    const sb = getSupabase();
+    const row: Record<string, unknown> = {};
+    if (patch.jobType !== undefined) row.job_type = patch.jobType;
+    if (patch.clientOrSite !== undefined) row.client_or_site = patch.clientOrSite ?? null;
+    if (patch.location !== undefined) row.location = patch.location ?? null;
+    if (patch.priority !== undefined) row.priority = patch.priority;
+    if (patch.dueDate !== undefined) row.due_date = patch.dueDate ?? null;
+    if (patch.instructions !== undefined) row.instructions = patch.instructions ?? null;
+    if (patch.assignedTo !== undefined) {
+      row.assigned_to = patch.assignedTo ?? null;
+      // Re-assigning a still-open case keeps its lifecycle sane.
+      row.status = patch.assignedTo ? 'assigned' : 'available';
+    }
+    const { data, error } = await sb
+      .from('cases')
+      .update(row)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data ? rowToCase(data) : null;
+  } catch (err) {
+    console.error('[KT] updateCase failed', err);
+    return null;
+  }
+}
+
+// ─── Shared UI helpers (DRY — single source of truth for all case screens) ──
+
+export const CASE_STATUS_ORDER: Case['status'][] = [
+  'available',
+  'assigned',
+  'in_progress',
+  'submitted',
+  'needs_changes',
+  'closed',
+];
+
+export const CASE_PRIORITIES = ['high', 'medium', 'low'] as const;
+
+/** Map a case status to a Badge kind (used by every card/detail). */
+export function caseStatusBadge(status: Case['status']): BadgeKind {
+  switch (status) {
+    case 'available':
+      return 'draft';
+    case 'assigned':
+    case 'in_progress':
+      return 'pending';
+    case 'submitted':
+      return 'submitted';
+    case 'needs_changes':
+      return 'flagged';
+    case 'closed':
+      return 'reviewed';
+    default:
+      return 'draft';
+  }
+}
+
+/** i18n key for a case status label (e.g. cases.statusAssigned). */
+export function caseStatusKey(status: Case['status']): string {
+  const camel = status.replace(/_([a-z])/g, (_m, c) => c.toUpperCase());
+  return `cases.status_${camel}`;
+}
+
+/** Priority accent colour, derived from the theme (no hardcoded palette). */
+export function priorityColor(
+  priority: Case['priority'],
+  colors: { gold: string; muted: string; danger?: string },
+): string {
+  if (priority === 'high') return colors.danger ?? '#A04A2E';
+  if (priority === 'low') return colors.muted;
+  return colors.gold;
+}
+
+// ─── Case photos (reference by staff, evidence by the assigned employee) ────
+
+const CASE_BUCKET = 'case-photos';
+
+export interface CasePhoto {
+  id: string;
+  caseId: string;
+  uploadedBy: string | null;
+  storagePath: string;
+  caption: string | null;
+  createdAt: string;
+}
+
+function casePhotoId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : 'cp-' + Math.random().toString(36).slice(2);
+}
+
+function extOf(blob: Blob): string {
+  if (blob.type === 'image/png') return 'png';
+  if (blob.type === 'image/webp') return 'webp';
+  return 'jpg';
+}
+
+export async function listCasePhotos(caseId: string): Promise<CasePhoto[]> {
+  if (!HAS_SUPABASE) return [];
+  try {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('case_photos')
+      .select('*')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data ?? []).map((r: any) => ({
+      id: r.id as string,
+      caseId: r.case_id as string,
+      uploadedBy: r.uploaded_by as string | null,
+      storagePath: r.storage_path as string,
+      caption: r.caption as string | null,
+      createdAt: r.created_at as string,
+    }));
+  } catch (err) {
+    console.error('[KT] listCasePhotos failed', err);
+    return [];
+  }
+}
+
+/** Compress + upload one photo to the case, then store its metadata. */
+export async function uploadCasePhoto(
+  caseId: string,
+  file: File,
+  uploadedBy: string,
+): Promise<CasePhoto | null> {
+  if (!HAS_SUPABASE) return null;
+  try {
+    const sb = getSupabase();
+    const blob = await compressPhoto(file);
+    const id = casePhotoId();
+    const path = `${caseId}/${id}.${extOf(blob)}`;
+    const { error: upErr } = await sb.storage
+      .from(CASE_BUCKET)
+      .upload(path, blob, {
+        contentType: blob.type || 'image/jpeg',
+        upsert: false,
+      });
+    if (upErr && !/exist|duplicate/i.test(upErr.message)) throw upErr;
+    const { data, error } = await sb
+      .from('case_photos')
+      .insert({ id, case_id: caseId, uploaded_by: uploadedBy, storage_path: path })
+      .select('*')
+      .single();
+    if (error) throw error;
+    return {
+      id: data.id,
+      caseId: data.case_id,
+      uploadedBy: data.uploaded_by,
+      storagePath: data.storage_path,
+      caption: data.caption,
+      createdAt: data.created_at,
+    };
+  } catch (err) {
+    console.error('[KT] uploadCasePhoto failed', err);
+    return null;
+  }
+}
+
+export async function deleteCasePhoto(photo: CasePhoto): Promise<void> {
+  if (!HAS_SUPABASE) return;
+  try {
+    const sb = getSupabase();
+    await sb.storage.from(CASE_BUCKET).remove([photo.storagePath]);
+    await sb.from('case_photos').delete().eq('id', photo.id);
+  } catch (err) {
+    console.error('[KT] deleteCasePhoto failed', err);
+  }
+}
+
+/** Signed URL to display a private case photo. */
+export function getCasePhotoUrl(path: string): Promise<string | null> {
+  return getPhotoUrl(path, 3600, CASE_BUCKET);
 }

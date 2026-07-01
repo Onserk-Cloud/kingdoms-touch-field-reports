@@ -1,34 +1,27 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
 import { PrimaryButton, SecondaryButton } from '../components/Button';
+import { PhotoTile } from '../components/PhotoTile';
 import { Badge } from '../components/Badge';
 import { useTheme } from '../theme-context';
 import { useI18n } from '../lib/i18n';
 import { useSessionStore } from '../store/session';
-import { getCase, setCaseStatus, claimCase } from '../lib/cases';
+import {
+  getCase,
+  setCaseStatus,
+  claimCase,
+  caseStatusBadge,
+  caseStatusKey,
+  listCasePhotos,
+  uploadCasePhoto,
+  deleteCasePhoto,
+  getCasePhotoUrl,
+  type Case,
+  type CasePhoto,
+} from '../lib/cases';
 import { formatDate } from '../lib/format';
-import type { Case } from '../lib/cases';
-import type { BadgeKind } from '../components/Badge';
-
-function caseStatusToBadge(status: Case['status']): BadgeKind {
-  switch (status) {
-    case 'available':
-      return 'draft';
-    case 'assigned':
-    case 'in_progress':
-      return 'pending';
-    case 'submitted':
-      return 'submitted';
-    case 'needs_changes':
-      return 'flagged';
-    case 'closed':
-      return 'reviewed';
-    default:
-      return 'draft';
-  }
-}
 
 function isStaff(role?: string): boolean {
   return ['supervisor', 'admin', 'super_admin'].includes(role ?? '');
@@ -99,6 +92,47 @@ export function CaseDetail() {
     }
   }
 
+  const [photos, setPhotos] = useState<CasePhoto[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    void loadPhotos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  async function loadPhotos() {
+    if (!id) return;
+    const list = await listCasePhotos(id);
+    const urls: Record<string, string> = {};
+    for (const p of list) {
+      const u = await getCasePhotoUrl(p.storagePath);
+      if (u) urls[p.id] = u;
+    }
+    setPhotoUrls(urls);
+    setPhotos(list);
+  }
+
+  async function handleAddPhotos(files: FileList | null) {
+    if (!files || !id || !employee) return;
+    setUploadingPhoto(true);
+    try {
+      for (const f of Array.from(files)) {
+        await uploadCasePhoto(id, f, employee.id);
+      }
+      await loadPhotos();
+    } finally {
+      setUploadingPhoto(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  async function handleRemovePhoto(p: CasePhoto) {
+    await deleteCasePhoto(p);
+    await loadPhotos();
+  }
+
   const isAssigned = caseData?.assignedTo === employee?.id;
   const isStaffMember = isStaff(employee?.role);
   const isCreator = caseData?.createdBy === employee?.id;
@@ -150,6 +184,24 @@ export function CaseDetail() {
       <AppBar
         title={caseData.jobType}
         onBack={() => navigate('/cases')}
+        trailing={
+          isStaffMember ? (
+            <button
+              onClick={() => navigate(`/cases/${id}/edit`)}
+              className="kt-tap"
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: colors.forest,
+                padding: '8px 12px',
+                borderRadius: 10,
+                background: colors.ivory,
+              }}
+            >
+              {t('cases.edit')}
+            </button>
+          ) : undefined
+        }
       />
 
       <div
@@ -184,7 +236,10 @@ export function CaseDetail() {
             <div style={{ fontSize: 12, fontWeight: 700, color: colors.muted }}>
               {t('cases.status')}
             </div>
-            <Badge kind={caseStatusToBadge(caseData.status)} />
+            <Badge
+              kind={caseStatusBadge(caseData.status)}
+              label={t(caseStatusKey(caseData.status))}
+            />
           </div>
 
           <div
@@ -312,6 +367,88 @@ export function CaseDetail() {
             </div>
           )}
         </div>
+
+        {(isStaffMember || isAssigned) && (
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              padding: 16,
+              border: `1px solid ${colors.line}`,
+              marginBottom: 16,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: colors.goldDeep,
+                letterSpacing: 0.8,
+                textTransform: 'uppercase',
+                marginBottom: 10,
+              }}
+            >
+              {t('cases.photosTitle')}
+            </div>
+            {photos.length === 0 && (
+              <div
+                style={{ fontSize: 12.5, color: colors.muted, marginBottom: 10 }}
+              >
+                {t('cases.noPhotos')}
+              </div>
+            )}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 8,
+              }}
+            >
+              {photos.map((p) => (
+                <PhotoTile
+                  key={p.id}
+                  height={92}
+                  src={photoUrls[p.id]}
+                  onRemove={
+                    isStaffMember || p.uploadedBy === employee?.id
+                      ? () => void handleRemovePhoto(p)
+                      : undefined
+                  }
+                />
+              ))}
+              <div
+                onClick={() => fileRef.current?.click()}
+                className="kt-tap"
+                style={{
+                  height: 92,
+                  borderRadius: 14,
+                  border: `1.5px dashed ${colors.forest}`,
+                  background: 'rgba(31,61,43,0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: colors.forest,
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: 22, lineHeight: 1 }}>＋</span>
+                <span style={{ fontSize: 10, fontWeight: 700, marginTop: 2 }}>
+                  {uploadingPhoto ? t('common.loading') : t('cases.addPhoto')}
+                </span>
+              </div>
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => void handleAddPhotos(e.target.files)}
+            />
+          </div>
+        )}
 
         {caseData.reviewNote && (
           <div

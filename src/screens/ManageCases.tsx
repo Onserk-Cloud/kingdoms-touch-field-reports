@@ -1,31 +1,21 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
-import { AppBar } from '../components/AppBar';
-import { Badge } from '../components/Badge';
+import { AdminTabBar } from '../components/TabBar';
+import { LogoMark } from '../components/LogoMark';
+import { CaseCard } from '../components/CaseCard';
 import { useTheme } from '../theme-context';
 import { useI18n } from '../lib/i18n';
-import { listAllCases } from '../lib/cases';
-import { formatDate } from '../lib/format';
-import type { Case } from '../lib/cases';
-import type { BadgeKind } from '../components/Badge';
+import {
+  listAllCases,
+  caseStatusKey,
+  CASE_STATUS_ORDER,
+  type Case,
+} from '../lib/cases';
 
-function caseStatusToBadge(status: Case['status']): BadgeKind {
-  switch (status) {
-    case 'available':
-      return 'draft';
-    case 'assigned':
-    case 'in_progress':
-      return 'pending';
-    case 'submitted':
-      return 'submitted';
-    case 'needs_changes':
-      return 'flagged';
-    case 'closed':
-      return 'reviewed';
-    default:
-      return 'draft';
-  }
+/** Local 'YYYY-MM-DD' (matches the date column format). */
+function todayStr(): string {
+  return new Date().toLocaleDateString('en-CA');
 }
 
 export function ManageCases() {
@@ -44,89 +34,172 @@ export function ManageCases() {
   async function load() {
     setLoading(true);
     try {
-      const list = await listAllCases();
-      setCases(list);
+      setCases(await listAllCases());
     } finally {
       setLoading(false);
     }
   }
 
-  const filtered = cases.filter((c) => filter === 'all' || c.status === filter);
+  const summary = useMemo(() => {
+    const today = todayStr();
+    const openCases = cases.filter((c) => c.status !== 'closed');
+    return {
+      open: openCases.length,
+      overdue: openCases.filter((c) => c.dueDate && c.dueDate < today).length,
+      high: openCases.filter((c) => c.priority === 'high').length,
+    };
+  }, [cases]);
+
+  // Only show filter chips for statuses that actually exist (dynamic).
+  const presentStatuses = useMemo(
+    () => CASE_STATUS_ORDER.filter((s) => cases.some((c) => c.status === s)),
+    [cases],
+  );
+
+  const visible = cases.filter((c) => filter === 'all' || c.status === filter);
 
   return (
     <PhoneFrame bg={colors.ivory}>
-      <AppBar
-        title={t('cases.manageTitle')}
-        eyebrow={t('cases.eyebrow')}
-        onBack={() => navigate('/supervisor')}
-      />
-
+      {/* Header band */}
       <div
         style={{
-          position: 'absolute',
-          top: 110,
-          right: 0,
-          left: 0,
-          padding: '0 20px 12px',
-          display: 'flex',
-          gap: 8,
+          background: '#fff',
+          padding: '58px 20px 14px',
+          borderBottom: `1px solid ${colors.line}`,
         }}
+        className="kt-safe-top"
       >
-        <button
-          onClick={() => navigate('/cases/new')}
-          className="kt-tap"
-          style={{
-            flex: 1,
-            height: 48,
-            borderRadius: 12,
-            background: colors.forest,
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 14,
-            cursor: 'pointer',
-          }}
-        >
-          {t('cases.newCase')}
-        </button>
-        <button
-          onClick={() => {
-            const order: (Case['status'] | 'all')[] = [
-              'all',
-              'available',
-              'assigned',
-              'in_progress',
-              'submitted',
-              'closed',
-            ];
-            setFilter((f) => order[(order.indexOf(f) + 1) % order.length]);
-          }}
-          className="kt-tap"
-          style={{
-            padding: '0 12px',
-            borderRadius: 12,
-            border: `1.5px solid ${colors.line}`,
-            background: '#fff',
-            cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: 12,
-          }}
-        >
-          {filter === 'all' ? t('cases.filterAll') : filter}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 12,
+              background: colors.forest,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <LogoMark size={26} variant="white" />
+          </div>
+          <div style={{ flex: 1, lineHeight: 1.1 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: colors.goldDeep,
+                letterSpacing: 1.8,
+                textTransform: 'uppercase',
+              }}
+            >
+              {t('cases.eyebrow')}
+            </div>
+            <div
+              style={{
+                fontFamily: 'Cinzel, Georgia, serif',
+                fontSize: 20,
+                fontWeight: 500,
+                color: colors.charcoal,
+                letterSpacing: -0.3,
+                marginTop: 2,
+              }}
+            >
+              {t('cases.tabTitle')}
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/cases/new')}
+            aria-label={t('cases.newCase')}
+            className="kt-tap"
+            style={{
+              height: 40,
+              padding: '0 14px',
+              borderRadius: 12,
+              background: colors.forest,
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span style={{ fontSize: 18, lineHeight: 1 }}>＋</span>
+            {t('cases.newCase')}
+          </button>
+        </div>
       </div>
 
       <div
         className="kt-scroll"
         style={{
           position: 'absolute',
-          top: 165,
-          bottom: 0,
+          top: 132,
+          bottom: 92,
           left: 0,
           right: 0,
           overflow: 'auto',
-          padding: '18px 20px 40px',
+          padding: '16px 20px 30px',
         }}
       >
+        {/* Summary */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <SummaryStat
+            n={summary.open}
+            label={t('cases.summaryOpen')}
+            tint={colors.forest}
+            colors={colors}
+          />
+          <SummaryStat
+            n={summary.overdue}
+            label={t('cases.summaryOverdue')}
+            tint="#A04A2E"
+            colors={colors}
+          />
+          <SummaryStat
+            n={summary.high}
+            label={t('cases.summaryHigh')}
+            tint={colors.goldDeep}
+            colors={colors}
+          />
+        </div>
+
+        {/* Filter chips */}
+        <div
+          className="kt-scroll"
+          style={{
+            display: 'flex',
+            gap: 6,
+            overflowX: 'auto',
+            paddingBottom: 12,
+          }}
+        >
+          {(['all', ...presentStatuses] as const).map((f) => {
+            const on = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className="kt-tap"
+                style={{
+                  flexShrink: 0,
+                  padding: '7px 12px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                  border: `1.5px solid ${on ? colors.forest : colors.line}`,
+                  background: on ? colors.forest : '#fff',
+                  color: on ? '#fff' : colors.muted,
+                }}
+              >
+                {f === 'all' ? t('cases.filterAll') : t(caseStatusKey(f))}
+              </button>
+            );
+          })}
+        </div>
+
         {loading && (
           <div
             style={{
@@ -141,7 +214,7 @@ export function ManageCases() {
           </div>
         )}
 
-        {!loading && filtered.length === 0 && (
+        {!loading && visible.length === 0 && (
           <div
             style={{
               padding: 24,
@@ -158,106 +231,65 @@ export function ManageCases() {
           </div>
         )}
 
-        {filtered.map((c) => (
-          <div
+        {visible.map((c) => (
+          <CaseCard
             key={c.id}
+            c={c}
             onClick={() => navigate(`/cases/${c.id}`)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                navigate(`/cases/${c.id}`);
-              }
-            }}
-            className="kt-tap"
-            style={{
-              background: '#fff',
-              borderRadius: 16,
-              padding: 14,
-              marginBottom: 10,
-              border: `1px solid ${colors.line}`,
-              cursor: 'pointer',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 8,
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: colors.charcoal,
-                    letterSpacing: -0.1,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {c.jobType}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: colors.muted,
-                    marginTop: 3,
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {c.location ?? '—'}
-                </div>
-              </div>
-              <Badge kind={caseStatusToBadge(c.status)} />
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                marginTop: 10,
-              }}
-            >
-              {c.dueDate && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: colors.muted,
-                    fontWeight: 600,
-                  }}
-                >
-                  {t('cases.dueDateShort')}: {formatDate(new Date(c.dueDate).getTime())}
-                </span>
-              )}
-              {c.priority !== 'medium' && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color:
-                      c.priority === 'high'
-                        ? '#A04A2E'
-                        : colors.gold,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.4,
-                  }}
-                >
-                  {c.priority}
-                </span>
-              )}
-            </div>
-          </div>
+          />
         ))}
       </div>
+
+      <AdminTabBar active="cases" />
     </PhoneFrame>
+  );
+}
+
+function SummaryStat({
+  n,
+  label,
+  tint,
+  colors,
+}: {
+  n: number;
+  label: string;
+  tint: string;
+  colors: { line: string; muted: string };
+}) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        padding: '12px 10px',
+        background: '#fff',
+        borderRadius: 14,
+        border: `1px solid ${colors.line}`,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: 'Cinzel, Georgia, serif',
+          fontSize: 26,
+          fontWeight: 500,
+          color: tint,
+          letterSpacing: -0.4,
+          lineHeight: 1,
+        }}
+      >
+        {n}
+      </div>
+      <div
+        style={{
+          fontSize: 10.5,
+          fontWeight: 700,
+          color: colors.muted,
+          marginTop: 4,
+          letterSpacing: 0.3,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </div>
+    </div>
   );
 }

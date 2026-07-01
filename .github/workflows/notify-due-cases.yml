@@ -1,0 +1,22 @@
+name: Notify due cases
+
+# Once a day, ask Supabase to check for cases due within 2 days and notify
+# their assignees (which also fires a phone push). The check is idempotent
+# and deduped, so running it is always safe. No secrets needed — the Edge
+# Function holds its own service key.
+
+on:
+  schedule:
+    - cron: '5 13 * * *' # daily ~08:05 US Eastern
+  workflow_dispatch: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the due-date check
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            "https://siphkouwkdbouktpmmpo.functions.supabase.co/run-due-check")
+          echo "run-due-check -> HTTP ${code}"
+          test "$code" = "200"

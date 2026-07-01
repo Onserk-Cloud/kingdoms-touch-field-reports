@@ -10,7 +10,7 @@ interface TabBarProps {
 }
 
 interface AdminTab {
-  k: 'overview' | 'settings';
+  k: 'overview' | 'cases' | 'settings';
   label: string;
   icon: ReactNode;
   to: string;
@@ -227,6 +227,30 @@ export function AdminTabBar({ active }: { active: AdminTab['k'] }) {
             rx="1.6"
             stroke="currentColor"
             strokeWidth="1.6"
+          />
+        </svg>
+      ),
+    },
+    {
+      k: 'cases',
+      label: t('tabBar.cases'),
+      to: '/cases',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect
+            x="3"
+            y="6"
+            width="16"
+            height="12"
+            rx="2"
+            stroke="currentColor"
+            strokeWidth="1.7"
+          />
+          <path
+            d="M8 6V4.6A1.6 1.6 0 019.6 3h2.8A1.6 1.6 0 0114 4.6V6"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
           />
         </svg>
       ),

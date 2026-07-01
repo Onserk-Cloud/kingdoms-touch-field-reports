@@ -10,6 +10,7 @@ import { ktStore } from '../lib/offline-store';
 import { useUnreadCount } from '../lib/notifications';
 import { formatDateLong } from '../lib/format';
 import { listAssignedCases, type Case } from '../lib/cases';
+import { CaseCard } from '../components/CaseCard';
 import { useI18n } from '../lib/i18n';
 
 export function Home() {
@@ -411,90 +412,16 @@ export function Home() {
               {t('cases.assignedToYou')}
             </div>
             {assignedCases.map((c) => (
-              <div
+              <CaseCard
                 key={c.id}
+                c={c}
                 onClick={() => navigate(`/cases/${c.id}`)}
-                role="button"
-                tabIndex={0}
-                aria-label={c.jobType}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    navigate(`/cases/${c.id}`);
-                  }
-                }}
-                className="kt-tap"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: 14,
-                  background: '#fff',
-                  borderRadius: 16,
-                  marginBottom: 10,
-                  border: `1px solid ${colors.line}`,
-                  cursor: 'pointer',
-                }}
-              >
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 12,
-                    flexShrink: 0,
-                    background:
-                      c.priority === 'high'
-                        ? 'rgba(180,90,60,0.14)'
-                        : 'rgba(196,152,76,0.14)',
-                    color: c.priority === 'high' ? '#A04A2E' : colors.goldDeep,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: 15,
-                  }}
-                >
-                  {c.status === 'available' ? '☆' : '●'}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: colors.charcoal,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {c.jobType}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12.5,
-                      color: colors.muted,
-                      marginTop: 2,
-                      fontWeight: 500,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {c.status === 'available'
-                      ? t('cases.poolAvailable')
-                      : c.location || c.clientOrSite || ''}
-                  </div>
-                </div>
-                <svg width="8" height="12" viewBox="0 0 8 12" fill="none">
-                  <path
-                    d="M1 1l6 5-6 5"
-                    stroke={colors.muted}
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
+                subtitle={
+                  c.status === 'available'
+                    ? t('cases.poolAvailable')
+                    : undefined
+                }
+              />
             ))}
           </div>
         )}

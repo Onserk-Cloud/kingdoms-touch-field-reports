@@ -28,6 +28,8 @@ function titleFor(type: string): string {
       return 'New case assigned';
     case 'case_needs_changes':
       return 'Changes requested';
+    case 'case_due_soon':
+      return 'Case due soon';
     case 'new_report':
       return 'New report submitted';
     case 'reviewed':
@@ -40,7 +42,12 @@ function titleFor(type: string): string {
 }
 
 function urlFor(type: string): string {
-  if (type === 'case_assigned' || type === 'case_needs_changes') return '/home';
+  if (
+    type === 'case_assigned' ||
+    type === 'case_needs_changes' ||
+    type === 'case_due_soon'
+  )
+    return '/home';
   if (type === 'new_report') return '/supervisor';
   return '/notifications';
 }

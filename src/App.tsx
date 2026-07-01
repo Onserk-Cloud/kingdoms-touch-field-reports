@@ -58,6 +58,9 @@ const CreateCase = lazy(() =>
 const CaseDetail = lazy(() =>
   import('./screens/CaseDetail').then((m) => ({ default: m.CaseDetail })),
 );
+const EditCase = lazy(() =>
+  import('./screens/EditCase').then((m) => ({ default: m.EditCase })),
+);
 
 /** Brief neutral screen shown while a route chunk loads. */
 function RouteFallback() {
@@ -209,6 +212,14 @@ export function App() {
           element={
             <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
               <CreateCase />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/cases/:id/edit"
+          element={
+            <RequireAuth roles={['supervisor', 'admin', 'super_admin']}>
+              <EditCase />
             </RequireAuth>
           }
         />

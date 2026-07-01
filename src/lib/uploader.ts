@@ -90,15 +90,16 @@ function blobExt(b: Blob): string {
   }
 }
 
-/** Returns a signed URL for displaying a private photo. */
+/** Returns a signed URL for displaying a private photo (any bucket). */
 export async function getPhotoUrl(
   storagePath: string,
   expiresInSec = 3600,
+  bucket = 'report-photos',
 ): Promise<string | null> {
   if (!HAS_SUPABASE) return null;
   const sb = getSupabase();
   const { data, error } = await sb.storage
-    .from('report-photos')
+    .from(bucket)
     .createSignedUrl(storagePath, expiresInSec);
   if (error) return null;
   return data.signedUrl;
