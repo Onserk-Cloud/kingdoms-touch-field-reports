@@ -44,3 +44,6 @@ lh.json
 docs-build/preview-*.png
 
 .env*
+
+# Design source package (not part of the app build)
+Material/

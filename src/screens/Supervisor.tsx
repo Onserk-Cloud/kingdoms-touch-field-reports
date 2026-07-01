@@ -2,41 +2,51 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AdminTabBar } from '../components/TabBar';
-import { LogoMark } from '../components/LogoMark';
-import { Badge, type BadgeKind } from '../components/Badge';
-import { BellIcon, ClockIcon, PhotoIcon } from '../components/Icons';
+import { Badge } from '../components/Badge';
+import { BellIcon, ClockIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { HAS_SUPABASE, getSupabase } from '../lib/supabase';
 import { ktStore } from '../lib/offline-store';
 import { useUnreadCount } from '../lib/notifications';
-import { getDemoEmployee } from '../lib/auth';
+import { useSessionStore } from '../store/session';
+import {
+  listAllCases,
+  caseStatusBadge,
+  caseStatusKey,
+  priorityColor,
+  type Case,
+} from '../lib/cases';
 import { formatDate, formatTime, initialsOf } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import type { OfflineReport, ReportRow } from '../lib/types';
 
-interface CombinedRow {
+function todayStr(): string {
+  return new Date().toLocaleDateString('en-CA');
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  initials: string;
+  avatar_color: string | null;
+}
+interface ReviewReport {
   id: string;
   jobType: string;
-  location: string;
-  status: BadgeKind;
   who: string;
   time: number;
-  photos: number;
-  /** Whether this came from Supabase (remote) or only IndexedDB (local). */
-  remote: boolean;
 }
 
 export function Supervisor() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const me = useSessionStore((s) => s.employee);
   const unread = useUnreadCount();
-  const [rows, setRows] = useState<CombinedRow[]>([]);
+
+  const [cases, setCases] = useState<Case[]>([]);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [reviewReports, setReviewReports] = useState<ReviewReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [filter, setFilter] = useState<
-    'all' | 'pending' | 'flagged' | 'reviewed'
-  >('all');
 
   useEffect(() => {
     void load();
@@ -44,146 +54,174 @@ export function Supervisor() {
 
   async function load() {
     setLoading(true);
-    setError(false);
     try {
+      const cs = await listAllCases();
+      setCases(cs);
       if (HAS_SUPABASE) {
         const sb = getSupabase();
-        const { data, error } = await sb
-          .from('reports')
-          .select(
-            'id, job_type, location, status, submitted_at, created_at, employee_id, employees!employee_id(name), report_photos(id)',
-          )
-          .order('created_at', { ascending: false })
-          .limit(50);
-        if (error) throw error;
-        const list = (data ?? []).map((r: any) => ({
-          id: r.id as string,
-          jobType: r.job_type as string,
-          location: r.location as string,
-          // DB enum → badge kind ('needs_update' is not a BadgeKind; passing
-          // it raw crashed the whole dashboard the moment a report was
-          // flagged for changes).
-          status: (r.status === 'needs_update'
-            ? 'flagged'
-            : r.status) as BadgeKind,
-          who: r.employees?.name ?? 'Unknown',
-          time: new Date(r.submitted_at ?? r.created_at).getTime(),
-          photos: r.report_photos?.length ?? 0,
-          remote: true,
-        }));
-        setRows(list);
-      } else {
-        // Demo mode — use local IndexedDB + demo seed. Exclude the states a
-        // real backend never exposes to a supervisor (private drafts, sync
-        // errors), so the demo dashboard matches the Supabase path.
-        const local = (await ktStore.listReports()).filter(
-          (r) => r.status !== 'draft' && r.status !== 'error',
+        const [emps, reps] = await Promise.all([
+          sb
+            .from('employees')
+            .select('id, name, initials, avatar_color')
+            .eq('active', true)
+            .eq('role', 'employee'),
+          sb
+            .from('reports')
+            .select('id, job_type, submitted_at, created_at, employees!employee_id(name)')
+            .eq('status', 'submitted')
+            .order('created_at', { ascending: false })
+            .limit(20),
+        ]);
+        setTeam((emps.data ?? []) as TeamMember[]);
+        setReviewReports(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (reps.data ?? []).map((r: any) => ({
+            id: r.id,
+            jobType: r.job_type,
+            who: r.employees?.name ?? '—',
+            time: new Date(r.submitted_at ?? r.created_at).getTime(),
+          })),
         );
-        const photos: Record<string, number> = {};
-        for (const r of local) {
-          const ps = await ktStore.listPhotos(r.id);
-          photos[r.id] = ps.length;
-        }
-        const list: CombinedRow[] = local.map((r) => ({
-          id: r.id,
-          jobType: r.jobType || 'Field Report',
-          location: r.location || '—',
-          status: mapStatus(r.status),
-          who: getDemoEmployee(r.employeeId)?.name ?? 'Field Tech',
-          time: r.createdAt,
-          photos: photos[r.id] ?? 0,
-          remote: false,
-        }));
-        setRows(list);
+      } else {
+        const local = (await ktStore.listReports()).filter(
+          (r) => r.status === 'submitted',
+        );
+        setReviewReports(
+          local.map((r) => ({
+            id: r.id,
+            jobType: r.jobType || 'Field Report',
+            who: 'Field Tech',
+            time: r.createdAt,
+          })),
+        );
       }
-    } catch (err) {
-      console.error('[KT] supervisor load failed', err);
-      setError(true);
     } finally {
       setLoading(false);
     }
   }
 
-  const counts = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tStart = today.getTime();
+  const stats = useMemo(() => {
+    const today = todayStr();
+    const open = cases.filter((c) => c.status !== 'closed');
+    const byStatus = (s: Case['status']) =>
+      cases.filter((c) => c.status === s).length;
     return {
-      total: rows.length,
-      today: rows.filter((r) => r.time >= tStart).length,
-      pending: rows.filter((r) => r.status === 'pending').length,
-      flagged: rows.filter((r) => r.status === 'flagged').length,
-      completed: rows.filter(
-        (r) => r.status === 'submitted' || r.status === 'reviewed',
-      ).length,
+      open: open.length,
+      inProgress: byStatus('in_progress'),
+      inReview: byStatus('submitted'),
+      overdue: open.filter((c) => c.dueDate && c.dueDate < today).length,
+      dueToday: open.filter((c) => c.dueDate === today).length,
+      pipeline: [
+        { key: 'available' as const, n: byStatus('available') },
+        { key: 'assigned' as const, n: byStatus('assigned') },
+        { key: 'in_progress' as const, n: byStatus('in_progress') },
+        { key: 'submitted' as const, n: byStatus('submitted') },
+        { key: 'closed' as const, n: byStatus('closed') },
+      ],
     };
-  }, [rows]);
+  }, [cases]);
 
-  const employees = useMemo(() => {
-    const map = new Map<string, { name: string; n: number; color: string }>();
-    const palette = ['#7FA66E', colors.gold, colors.sage, colors.forestSoft];
-    for (const r of rows) {
-      const existing = map.get(r.who);
-      if (existing) existing.n += 1;
-      else
-        map.set(r.who, {
-          name: r.who,
-          n: 1,
-          color: palette[map.size % palette.length],
-        });
+  const attention = useMemo(() => {
+    const today = todayStr();
+    const rank = (c: Case): number => {
+      if (c.dueDate && c.dueDate < today) return 0; // overdue
+      if (c.status === 'submitted') return 1; // to review
+      if (c.dueDate === today) return 2; // due today
+      return 9;
+    };
+    return cases
+      .filter((c) => c.status !== 'closed' && rank(c) < 9)
+      .sort((a, b) => rank(a) - rank(b))
+      .slice(0, 4);
+  }, [cases]);
+
+  const workload = useMemo(() => {
+    const today = todayStr();
+    void today;
+    const counts = new Map<string, number>();
+    for (const c of cases) {
+      if (c.status !== 'closed' && c.assignedTo)
+        counts.set(c.assignedTo, (counts.get(c.assignedTo) ?? 0) + 1);
     }
-    return Array.from(map.values()).slice(0, 4);
-  }, [rows, colors]);
+    const max = Math.max(1, ...counts.values());
+    return team
+      .map((m) => ({ ...m, n: counts.get(m.id) ?? 0 }))
+      .filter((m) => m.n > 0)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 4)
+      .map((m) => ({ ...m, load: m.n / max }));
+  }, [cases, team]);
 
-  const visible = rows.filter((r) => filter === 'all' || r.status === filter);
+  const attnTotal = stats.overdue + stats.dueToday + stats.inReview;
 
   return (
     <PhoneFrame bg={colors.ivory}>
+      {/* Header */}
       <div
         style={{
-          background: '#fff',
-          padding: '58px 20px 14px',
-          borderBottom: `1px solid ${colors.line}`,
+          background: `linear-gradient(160deg, ${colors.forestSoft} 0%, ${colors.forest} 55%, #15291d 100%)`,
+          color: '#fff',
+          padding: '56px 20px 30px',
+          borderBottomLeftRadius: 28,
+          borderBottomRightRadius: 28,
+          position: 'relative',
+          overflow: 'hidden',
         }}
         className="kt-safe-top"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: -50,
+            right: -40,
+            width: 190,
+            height: 190,
+            borderRadius: '50%',
+            background:
+              'radial-gradient(circle, rgba(196,152,76,0.25) 0%, transparent 65%)',
+          }}
+        />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            position: 'relative',
+          }}
+        >
           <div
             style={{
-              width: 42,
-              height: 42,
-              borderRadius: 12,
-              background: colors.forest,
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: me?.avatar_color ?? colors.gold,
+              color: '#fff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: 15,
+              border: '2px solid rgba(255,255,255,0.25)',
+              flexShrink: 0,
             }}
           >
-            <LogoMark size={26} variant="white" />
+            {me ? me.initials || initialsOf(me.name) : 'KT'}
           </div>
-          <div style={{ flex: 1, lineHeight: 1.1 }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: colors.goldDeep,
-                letterSpacing: 1.8,
-                textTransform: 'uppercase',
-              }}
-            >
-              {t('supervisor.eyebrow')}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.2 }}>
+              {me?.name ?? 'Kingdoms Touch'}
             </div>
             <div
               style={{
-                fontFamily: 'Cinzel, Georgia, serif',
-                fontSize: 20,
-                fontWeight: 500,
-                color: colors.charcoal,
-                letterSpacing: -0.3,
-                marginTop: 2,
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                color: colors.goldSoft,
+                marginTop: 3,
               }}
             >
-              {t('supervisor.title')}
+              {t('supervisor.eyebrow')}
             </div>
           </div>
           <button
@@ -191,35 +229,35 @@ export function Supervisor() {
             aria-label={t('supervisor.notifications')}
             className="kt-tap"
             style={{
-              width: 38,
-              height: 38,
+              width: 40,
+              height: 40,
               borderRadius: 12,
-              background: colors.ivory,
-              position: 'relative',
+              background: 'rgba(255,255,255,0.12)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              position: 'relative',
             }}
           >
-            <BellIcon color={colors.charcoal} size={18} />
+            <BellIcon color="#fff" size={18} />
             {unread > 0 && (
               <span
                 style={{
                   position: 'absolute',
-                  top: 1,
-                  right: 1,
-                  minWidth: 16,
-                  height: 16,
+                  top: -3,
+                  right: -3,
+                  minWidth: 17,
+                  height: 17,
                   padding: '0 4px',
                   borderRadius: 999,
-                  background: '#E74E3C',
+                  background: '#B53D2E',
                   color: '#fff',
                   fontSize: 10,
                   fontWeight: 800,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: '1.5px solid #fff',
+                  border: `1.5px solid ${colors.forest}`,
                 }}
               >
                 {unread > 9 ? '9+' : unread}
@@ -227,315 +265,316 @@ export function Supervisor() {
             )}
           </button>
         </div>
+        <div
+          style={{
+            fontSize: 12.5,
+            color: 'rgba(255,255,255,0.6)',
+            marginTop: 16,
+            fontWeight: 500,
+          }}
+        >
+          {formatDate(Date.now())}
+        </div>
+        <div
+          style={{
+            fontFamily: 'Cinzel, Georgia, serif',
+            fontSize: 24,
+            fontWeight: 500,
+            letterSpacing: -0.4,
+            marginTop: 2,
+          }}
+        >
+          {t('cases.opsOverview')}
+        </div>
       </div>
 
       <div
-        className="kt-scroll"
         style={{
           position: 'absolute',
-          top: 132,
+          top: 208,
           bottom: 92,
           left: 0,
           right: 0,
           overflow: 'auto',
-          padding: '18px 20px 30px',
+          padding: '0 20px 24px',
         }}
+        className="kt-scroll"
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 10,
-          }}
-        >
+        {/* Attention alert */}
+        {attnTotal > 0 && (
           <div
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: colors.muted,
-              letterSpacing: 1.4,
-              textTransform: 'uppercase',
+            onClick={() => navigate('/cases')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') navigate('/cases');
             }}
-          >
-            {t('supervisor.todayDate', { date: formatDate(Date.now()) })}
-          </div>
-          <div
+            className="kt-tap"
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '4px 10px',
-              borderRadius: 999,
-              background: 'rgba(143,165,139,0.20)',
-              fontSize: 11,
-              fontWeight: 700,
-              color: colors.forestSoft,
-              letterSpacing: 0.4,
-            }}
-          >
-            <span
-              style={{
-                width: 5,
-                height: 5,
-                borderRadius: 999,
-                background: '#7FD692',
-              }}
-            />
-            {t('supervisor.onlineCount', { n: employees.length })}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Stat
-            n={counts.today}
-            label={t('supervisor.statToday')}
-            dark
-            active={filter === 'all'}
-            onClick={() => setFilter('all')}
-          />
-          <Stat
-            n={counts.pending}
-            label={t('supervisor.statPending')}
-            tint={colors.goldDeep}
-            active={filter === 'pending'}
-            onClick={() =>
-              setFilter((f) => (f === 'pending' ? 'all' : 'pending'))
-            }
-          />
-          <Stat
-            n={counts.flagged}
-            label={t('supervisor.statNeedsUpdate')}
-            tint="#A04A2E"
-            active={filter === 'flagged'}
-            onClick={() =>
-              setFilter((f) => (f === 'flagged' ? 'all' : 'flagged'))
-            }
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <div
-            style={{
-              flex: 1,
-              padding: 14,
-              borderRadius: 16,
+              marginTop: -20,
+              marginBottom: 16,
               background: '#fff',
-              border: `1px solid ${colors.line}`,
+              borderRadius: 18,
+              padding: 14,
+              border: `1px solid rgba(181,61,46,0.30)`,
+              boxShadow: '0 8px 22px rgba(31,61,43,0.07)',
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
+              gap: 12,
+              cursor: 'pointer',
             }}
           >
             <div
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: 'rgba(143,165,139,0.20)',
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: 'rgba(181,61,46,0.10)',
+                flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
                 <path
-                  d="M2 9.5l5 5L16 4"
-                  stroke={colors.forest}
-                  strokeWidth="2"
-                  strokeLinecap="round"
+                  d="M11 2l9 16H2L11 2z"
+                  stroke="#B53D2E"
+                  strokeWidth="1.7"
                   strokeLinejoin="round"
                 />
+                <path
+                  d="M11 8v4M11 15h.01"
+                  stroke="#B53D2E"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
-            <div style={{ lineHeight: 1.15 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 18,
+                  fontSize: 13.5,
                   fontWeight: 700,
                   color: colors.charcoal,
                 }}
               >
-                {counts.completed}
+                {t('cases.needAttentionTitle', { n: attnTotal })}
               </div>
               <div
                 style={{
-                  fontSize: 11,
-                  fontWeight: 600,
+                  fontSize: 11.5,
                   color: colors.muted,
-                  letterSpacing: 0.3,
+                  marginTop: 2,
+                  fontWeight: 500,
                 }}
               >
-                {t('supervisor.completedJobs')}
+                {t('cases.needAttentionSub', {
+                  overdue: stats.overdue,
+                  due: stats.dueToday,
+                  review: stats.inReview,
+                })}
               </div>
             </div>
-          </div>
-          <div
-            style={{
-              flex: 1,
-              padding: 14,
-              borderRadius: 16,
-              background: 'rgba(196,152,76,0.10)',
-              border: `1px solid rgba(196,152,76,0.30)`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-            }}
-          >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: colors.gold,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M2 8a6 6 0 0112 0M5 8a3 3 0 016 0"
-                  stroke="#fff"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                />
-                <circle cx="8" cy="10" r="1.3" fill="#fff" />
-                <path
-                  d="M1 1l14 14"
-                  stroke="#fff"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-            <div style={{ lineHeight: 1.15 }}>
-              <div
-                style={{
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: colors.charcoal,
-                }}
-              >
-                {counts.pending}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: colors.goldDeep,
-                  letterSpacing: 0.3,
-                }}
-              >
-                {t('supervisor.offlineAwaitingSync')}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={() => navigate('/cases')}
-          className="kt-tap"
-          style={{
-            width: '100%',
-            marginTop: 8,
-            height: 52,
-            borderRadius: 16,
-            background: colors.forest,
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 14,
-            letterSpacing: 0.2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            cursor: 'pointer',
-          }}
-        >
-          {t('cases.manageTitle')}
-        </button>
-
-        {employees.length > 0 && (
-          <div
-            style={{
-              marginTop: 18,
-              padding: 14,
-              background: '#fff',
-              borderRadius: 16,
-              border: `1px solid ${colors.line}`,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 10,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: colors.charcoal,
-                  letterSpacing: 0.2,
-                }}
-              >
-                {t('supervisor.teamActivity')}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {employees.map((e) => (
-                <div key={e.name} style={{ flex: 1, textAlign: 'center' }}>
-                  <div
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: '50%',
-                      margin: '0 auto',
-                      background: e.color,
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      letterSpacing: 0.3,
-                      border: `2px solid ${colors.ivory}`,
-                      boxShadow: `0 0 0 1px ${colors.line}`,
-                    }}
-                  >
-                    {initialsOf(e.name)}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: 'Cinzel, Georgia, serif',
-                      fontSize: 17,
-                      fontWeight: 600,
-                      color: colors.charcoal,
-                      marginTop: 6,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {e.n}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: colors.muted,
-                      fontWeight: 600,
-                      marginTop: 1,
-                    }}
-                  >
-                    {e.name.split(' ')[0]}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <svg width="9" height="14" viewBox="0 0 9 14" fill="none">
+              <path
+                d="M1 1l6 6-6 6"
+                stroke={colors.muted}
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
         )}
 
+        {/* KPI tiles */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 8,
+            marginTop: attnTotal > 0 ? 0 : 6,
+          }}
+        >
+          {[
+            { n: stats.open, label: t('cases.summaryOpen'), color: colors.gold },
+            {
+              n: stats.inProgress,
+              label: t('cases.kpiInProgress'),
+              color: '#3A78A0',
+            },
+            {
+              n: stats.inReview,
+              label: t('cases.kpiInReview'),
+              color: colors.goldDeep,
+            },
+            {
+              n: stats.overdue,
+              label: t('cases.summaryOverdue'),
+              color: '#B53D2E',
+            },
+          ].map((k) => (
+            <div
+              key={k.label}
+              onClick={() => navigate('/cases')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') navigate('/cases');
+              }}
+              className="kt-tap"
+              style={{
+                background: '#fff',
+                borderRadius: 14,
+                padding: '12px 6px',
+                border: `1px solid ${colors.line}`,
+                textAlign: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: 'Cinzel, Georgia, serif',
+                  fontSize: 24,
+                  fontWeight: 600,
+                  color: k.color,
+                  letterSpacing: -0.3,
+                }}
+              >
+                {k.n}
+              </div>
+              <div
+                style={{
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  color: colors.muted,
+                  marginTop: 2,
+                  letterSpacing: 0.2,
+                  lineHeight: 1.1,
+                }}
+              >
+                {k.label}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Create Case CTA */}
+        <div
+          onClick={() => navigate('/cases/new')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') navigate('/cases/new');
+          }}
+          className="kt-tap"
+          style={{
+            marginTop: 16,
+            height: 56,
+            borderRadius: 16,
+            cursor: 'pointer',
+            background: `linear-gradient(135deg, ${colors.gold} 0%, ${colors.goldDeep} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            boxShadow:
+              '0 6px 18px rgba(196,152,76,0.32), inset 0 1px 0 rgba(255,255,255,0.35)',
+            color: colors.forest,
+            fontSize: 16,
+            fontWeight: 800,
+            letterSpacing: 0.3,
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle
+              cx="10"
+              cy="10"
+              r="9"
+              stroke={colors.forest}
+              strokeWidth="1.6"
+            />
+            <path
+              d="M10 6v8M6 10h8"
+              stroke={colors.forest}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+          {t('cases.createNewCase')}
+        </div>
+
+        {/* Pipeline */}
+        <div style={{ marginTop: 22 }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: colors.goldDeep,
+              letterSpacing: 1.4,
+              textTransform: 'uppercase',
+              marginBottom: 10,
+            }}
+          >
+            {t('cases.pipeline')}
+          </div>
+          <div style={{ display: 'flex', gap: 7 }}>
+            {stats.pipeline.map((p) => (
+              <div
+                key={p.key}
+                onClick={() => navigate('/cases')}
+                className="kt-tap"
+                style={{
+                  flex: 1,
+                  background: '#fff',
+                  borderRadius: 12,
+                  padding: '10px 3px',
+                  border: `1px solid ${colors.line}`,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <div
+                  style={{
+                    width: 18,
+                    height: 3,
+                    borderRadius: 2,
+                    background:
+                      p.key === 'closed' ? colors.forest : colors.gold,
+                    margin: '0 auto 7px',
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 800,
+                    color: colors.charcoal,
+                  }}
+                >
+                  {p.n}
+                </div>
+                <div
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 700,
+                    color: colors.muted,
+                    marginTop: 2,
+                    letterSpacing: 0,
+                    lineHeight: 1.1,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {t(caseStatusKey(p.key))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Needs attention */}
         <div
           style={{
             display: 'flex',
@@ -554,55 +593,26 @@ export function Supervisor() {
               textTransform: 'uppercase',
             }}
           >
-            {t('supervisor.recentReports')}
+            {t('cases.needsAttention')}
           </div>
-          <button
-            onClick={() =>
-              setFilter((f) => {
-                const order = [
-                  'all',
-                  'pending',
-                  'flagged',
-                  'reviewed',
-                ] as const;
-                return order[(order.indexOf(f) + 1) % order.length];
-              })
-            }
+          <div
+            onClick={() => navigate('/cases')}
             className="kt-tap"
-            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: colors.forest,
+              letterSpacing: 0.4,
+              cursor: 'pointer',
+            }}
           >
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: filter === 'all' ? colors.charcoal : colors.goldDeep,
-                letterSpacing: 0.2,
-              }}
-            >
-              {filter === 'all'
-                ? t('supervisor.filter')
-                : filter === 'pending'
-                  ? t('supervisor.statPending')
-                  : filter === 'flagged'
-                    ? t('supervisor.statNeedsUpdate')
-                    : t('badge.reviewed')}
-            </span>
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path
-                d="M2 3l3 4 3-4"
-                stroke={filter === 'all' ? colors.charcoal : colors.goldDeep}
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+            {t('cases.allCases').toUpperCase()}
+          </div>
         </div>
-
         {loading && (
           <div
             style={{
-              padding: 20,
+              padding: 16,
               textAlign: 'center',
               color: colors.muted,
               fontSize: 13,
@@ -612,277 +622,307 @@ export function Supervisor() {
             {t('common.loading')}
           </div>
         )}
-
-        {error && !loading && rows.length === 0 && (
+        {!loading && attention.length === 0 && (
           <div
             style={{
-              padding: 24,
+              padding: 18,
               textAlign: 'center',
               background: '#fff',
               borderRadius: 14,
               border: `1px solid ${colors.line}`,
               color: colors.muted,
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 500,
             }}
           >
-            <div style={{ marginBottom: 14 }}>{t('common.loadError')}</div>
-            <button
-              onClick={() => void load()}
+            {t('cases.noAttention')}
+          </div>
+        )}
+        {attention.map((c) => {
+          const today = todayStr();
+          const overdue = !!c.dueDate && c.dueDate < today;
+          return (
+            <div
+              key={c.id}
+              onClick={() => navigate(`/cases/${c.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ')
+                  navigate(`/cases/${c.id}`);
+              }}
               className="kt-tap"
               style={{
-                minHeight: 44,
-                padding: '0 20px',
-                borderRadius: 12,
-                background: colors.forest,
-                color: '#fff',
-                fontSize: 13,
-                fontWeight: 700,
-                letterSpacing: 0.3,
+                background: '#fff',
+                borderRadius: 16,
+                padding: 13,
+                marginBottom: 10,
+                border: `1px solid ${colors.line}`,
+                display: 'flex',
+                gap: 11,
+                cursor: 'pointer',
               }}
             >
-              {t('common.retry')}
-            </button>
+              <div
+                style={{
+                  width: 3,
+                  borderRadius: 2,
+                  background: overdue
+                    ? '#B53D2E'
+                    : c.status === 'submitted'
+                      ? colors.goldDeep
+                      : '#3A78A0',
+                  flexShrink: 0,
+                }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: colors.charcoal,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {c.jobType}
+                  </span>
+                  <Badge
+                    kind={caseStatusBadge(c.status)}
+                    label={t(caseStatusKey(c.status))}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 8,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      color: colors.muted,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {c.location || c.clientOrSite || '—'}
+                  </span>
+                  {c.priority !== 'medium' && (
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: 800,
+                        letterSpacing: 0.4,
+                        textTransform: 'uppercase',
+                        color: priorityColor(c.priority, colors),
+                        flexShrink: 0,
+                      }}
+                    >
+                      {c.priority}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Team workload */}
+        {workload.length > 0 && (
+          <div
+            style={{
+              marginTop: 12,
+              background: '#fff',
+              borderRadius: 16,
+              padding: 16,
+              border: `1px solid ${colors.line}`,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  color: colors.charcoal,
+                }}
+              >
+                {t('cases.teamWorkload')}
+              </div>
+              <div
+                onClick={() => navigate('/manage')}
+                className="kt-tap"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: colors.forest,
+                  cursor: 'pointer',
+                }}
+              >
+                {t('cases.manage').toUpperCase()}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 14 }}>
+              {workload.map((m) => (
+                <div key={m.id} style={{ flex: 1, textAlign: 'center' }}>
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: '50%',
+                      margin: '0 auto',
+                      background: m.avatar_color ?? '#7FA66E',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700,
+                      fontSize: 12,
+                    }}
+                  >
+                    {m.initials || initialsOf(m.name)}
+                  </div>
+                  <div
+                    style={{
+                      height: 5,
+                      borderRadius: 3,
+                      background: colors.ivoryDeep,
+                      marginTop: 8,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${m.load * 100}%`,
+                        borderRadius: 3,
+                        background: m.load > 0.85 ? '#B53D2E' : colors.gold,
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: colors.muted,
+                      marginTop: 4,
+                    }}
+                  >
+                    {m.n}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {visible.length === 0 && !loading && !(error && rows.length === 0) && (
+        {/* Reports to review */}
+        <div
+          style={{
+            marginTop: 22,
+            marginBottom: 10,
+            fontSize: 11,
+            fontWeight: 700,
+            color: colors.goldDeep,
+            letterSpacing: 1.4,
+            textTransform: 'uppercase',
+          }}
+        >
+          {t('cases.reportsToReview')}
+        </div>
+        {!loading && reviewReports.length === 0 && (
           <div
             style={{
-              padding: 24,
+              padding: 18,
               textAlign: 'center',
               background: '#fff',
               borderRadius: 14,
               border: `1px solid ${colors.line}`,
               color: colors.muted,
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 500,
             }}
           >
             {t('supervisor.emptyReports')}
           </div>
         )}
-
-        {visible.slice(0, 12).map((r) => (
+        {reviewReports.slice(0, 8).map((r) => (
           <div
             key={r.id}
             onClick={() => navigate(`/supervisor/report/${r.id}`)}
             role="button"
             tabIndex={0}
-            aria-label={r.jobType}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
+              if (e.key === 'Enter' || e.key === ' ')
                 navigate(`/supervisor/report/${r.id}`);
-              }
             }}
             className="kt-tap"
             style={{
               background: '#fff',
-              borderRadius: 16,
-              padding: 14,
-              marginBottom: 10,
+              borderRadius: 14,
+              padding: '12px 14px',
+              marginBottom: 8,
               border: `1px solid ${colors.line}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
               cursor: 'pointer',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 8,
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: colors.charcoal,
-                    letterSpacing: -0.1,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {r.jobType}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: colors.muted,
-                    marginTop: 3,
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {r.who} · {r.location}
-                </div>
-              </div>
-              <Badge kind={r.status} />
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                marginTop: 10,
-              }}
-            >
-              <span
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: 11,
-                  color: colors.muted,
-                  fontWeight: 600,
-                }}
-              >
-                <ClockIcon color={colors.muted} />
-                {formatTime(r.time)}
-              </span>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: 11,
-                  color: colors.muted,
-                  fontWeight: 600,
-                }}
-              >
-                <PhotoIcon color={colors.muted} />
-                {t('supervisor.photosCount', { n: r.photos })}
-              </span>
-              <span
-                style={{
-                  marginLeft: 'auto',
-                  fontSize: 11,
+                  fontSize: 13.5,
                   fontWeight: 700,
-                  color: colors.forest,
-                  letterSpacing: 0.4,
+                  color: colors.charcoal,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                 }}
               >
-                {t('supervisor.open')}
-              </span>
+                {r.jobType}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: colors.muted,
+                  marginTop: 2,
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                {r.who} · <ClockIcon color={colors.muted} /> {formatTime(r.time)}
+              </div>
             </div>
+            <Badge kind="submitted" />
           </div>
         ))}
       </div>
+
       <AdminTabBar active="overview" />
     </PhoneFrame>
   );
 }
-
-function Stat({
-  n,
-  label,
-  tint,
-  dark,
-  onClick,
-  active,
-}: {
-  n: number;
-  label: string;
-  tint?: string;
-  dark?: boolean;
-  onClick?: () => void;
-  active?: boolean;
-}) {
-  const { colors } = useTheme();
-  return (
-    <div
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={
-        onClick
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick();
-              }
-            }
-          : undefined
-      }
-      className={onClick ? 'kt-tap' : undefined}
-      style={{
-        flex: 1,
-        padding: 14,
-        borderRadius: 16,
-        background: dark ? colors.forest : '#fff',
-        color: dark ? '#fff' : colors.charcoal,
-        border: `1.5px solid ${
-          active ? (tint ?? colors.gold) : dark ? 'transparent' : colors.line
-        }`,
-        position: 'relative',
-        overflow: 'hidden',
-        cursor: onClick ? 'pointer' : 'default',
-      }}
-    >
-      {dark && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -20,
-            right: -20,
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(196,152,76,0.30) 0%, transparent 70%)',
-          }}
-        />
-      )}
-      <div
-        style={{
-          fontFamily: 'Cinzel, Georgia, serif',
-          fontSize: 30,
-          fontWeight: 500,
-          letterSpacing: -0.4,
-          color: dark ? colors.gold : (tint ?? colors.forest),
-        }}
-      >
-        {n}
-      </div>
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: 0.6,
-          marginTop: 4,
-          color: dark ? 'rgba(255,255,255,0.7)' : colors.muted,
-          textTransform: 'uppercase',
-        }}
-      >
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function mapStatus(s: OfflineReport['status']): BadgeKind {
-  switch (s) {
-    case 'submitted':
-      return 'submitted';
-    case 'reviewed':
-      return 'reviewed';
-    case 'needs_update':
-      return 'flagged';
-    case 'pending':
-      return 'pending';
-    case 'syncing':
-      return 'pending';
-    case 'error':
-      return 'flagged';
-    default:
-      return 'draft';
-  }
-}
-
-// Keep imports used (TS noUnusedLocals)
-export type _Unused = ReportRow;
