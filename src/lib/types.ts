@@ -19,6 +19,10 @@ export interface Employee {
   initials: string;
   avatar_color?: string | null;
   created_at: string;
+  phone?: string | null;
+  email?: string | null;
+  skills?: string[] | null;
+  avatar_url?: string | null;
 }
 
 export interface ReportRow {

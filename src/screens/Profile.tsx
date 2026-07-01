@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
@@ -11,6 +11,8 @@ import { useSessionStore } from '../store/session';
 import { useInstall } from '../lib/pwa-install';
 import { initialsOf } from '../lib/format';
 import { HAS_SUPABASE } from '../lib/supabase';
+import { getMyProfile } from '../lib/profile';
+import { updateStoredEmployee } from '../lib/auth';
 import { resetDemoSeed, seedDemoData } from '../lib/seed-demo';
 import { ktStore } from '../lib/offline-store';
 
@@ -19,9 +21,27 @@ export function Profile() {
   const { t, locale, setLocale } = useI18n();
   const navigate = useNavigate();
   const employee = useSessionStore((s) => s.employee);
+  const setEmployee = useSessionStore((s) => s.setEmployee);
   const logout = useSessionStore((s) => s.logout);
   const { installed, ios, promptInstall } = useInstall();
   const [showInstallHint, setShowInstallHint] = useState(false);
+
+  // Pull the full profile (avatar/phone/email/skills) once so the header
+  // shows a photo and edits round-trip without a re-login.
+  useEffect(() => {
+    if (!HAS_SUPABASE || !employee?.id) return;
+    let alive = true;
+    void getMyProfile(employee.id).then((full) => {
+      if (alive && full) {
+        setEmployee(full);
+        updateStoredEmployee(full);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee?.id]);
 
   const handleInstall = async () => {
     // Always try the native prompt; fall back to instructions if unavailable.
@@ -47,6 +67,16 @@ export function Profile() {
       >
         {employee && (
           <div
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate('/profile/edit')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate('/profile/edit');
+              }
+            }}
+            className="kt-tap"
             style={{
               background: '#fff',
               borderRadius: 18,
@@ -56,26 +86,42 @@ export function Profile() {
               alignItems: 'center',
               gap: 14,
               marginBottom: 18,
+              cursor: 'pointer',
             }}
           >
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: employee.avatar_color ?? colors.forest,
-                color: '#fff',
-                fontSize: 22,
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
-              }}
-            >
-              {employee.initials || initialsOf(employee.name)}
-            </div>
-            <div style={{ flex: 1 }}>
+            {employee.avatar_url ? (
+              <img
+                src={employee.avatar_url}
+                alt=""
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  background: employee.avatar_color ?? colors.forest,
+                  color: '#fff',
+                  fontSize: 22,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
+                  flexShrink: 0,
+                }}
+              >
+                {employee.initials || initialsOf(employee.name)}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
                   fontFamily: 'Cinzel, Georgia, serif',
@@ -106,6 +152,16 @@ export function Profile() {
                         ? 'common.roleSupervisor'
                         : 'common.roleEmployee',
                 )}
+              </div>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  color: colors.forest,
+                  marginTop: 6,
+                }}
+              >
+                {t('profile.editProfile')} ›
               </div>
             </div>
           </div>

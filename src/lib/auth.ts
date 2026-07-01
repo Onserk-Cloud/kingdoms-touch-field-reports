@@ -269,6 +269,19 @@ export async function signInWithEmail(
   return session;
 }
 
+/**
+ * Merge fresh employee fields into the persisted session (e.g. after the user
+ * edits their own profile) so every screen reflects the change without a
+ * re-login. No-op if there is no active session.
+ */
+export function updateStoredEmployee(emp: Employee): KtSession | null {
+  const current = getSession();
+  if (!current) return null;
+  const next: KtSession = { ...current, employee: { ...current.employee, ...emp } };
+  persistSession(next);
+  return next;
+}
+
 export async function signOut(): Promise<void> {
   if (HAS_SUPABASE) {
     try {

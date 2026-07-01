@@ -46,6 +46,9 @@ const Notifications = lazy(() =>
 const Profile = lazy(() =>
   import('./screens/Profile').then((m) => ({ default: m.Profile })),
 );
+const EditProfile = lazy(() =>
+  import('./screens/EditProfile').then((m) => ({ default: m.EditProfile })),
+);
 const Help = lazy(() =>
   import('./screens/Help').then((m) => ({ default: m.Help })),
 );
@@ -156,6 +159,14 @@ export function App() {
           element={
             <RequireAuth>
               <Profile />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profile/edit"
+          element={
+            <RequireAuth>
+              <EditProfile />
             </RequireAuth>
           }
         />
