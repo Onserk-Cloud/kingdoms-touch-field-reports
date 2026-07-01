@@ -65,12 +65,21 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  send_url text := current_setting('app.send_push_url', true);
+  send_key text := current_setting('app.send_push_key', true);
 begin
+  -- If push isn't configured yet, do nothing — the in-app notification was
+  -- still created. This keeps notification inserts working before/without push.
+  if send_url is null or send_url = '' then
+    return new;
+  end if;
+
   perform net.http_post(
-    url := current_setting('app.send_push_url', true),
+    url := send_url,
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.send_push_key', true)
+      'Authorization', 'Bearer ' || coalesce(send_key, '')
     ),
     body := jsonb_build_object(
       'recipient_id', new.recipient_id,
@@ -80,6 +89,10 @@ begin
     )
   );
   return new;
+exception
+  -- Never let a push failure roll back the notification insert.
+  when others then
+    return new;
 end;
 $$;
 
