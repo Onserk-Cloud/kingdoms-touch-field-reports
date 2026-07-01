@@ -10,11 +10,10 @@
 --   3. Trigger on notifications: calls send-push Edge Function via pg_net
 --   4. pg_net extension: async HTTP calls, failures are non-blocking
 --
--- DEPLOYMENT STEPS:
---   - Ensure the send-push Edge Function is deployed
---   - Run: alter database postgres set app.send_push_url = 'https://<ref>.functions.supabase.co/send-push';
---   - Run: alter database postgres set app.send_push_key = '<service_role_key>';
---   These must be set before the trigger will work.
+-- DEPLOYMENT: just deploy the send-push Edge Function
+--   supabase functions deploy send-push --no-verify-jwt
+-- The trigger below has the function URL hardcoded, so no extra database
+-- settings are required.
 -- ─────────────────────────────────────────────────────────────
 
 -- Enable pg_net for async HTTP calls (idempotent). On Supabase pg_net manages
@@ -51,9 +50,8 @@ create policy "push_subscriptions: user manages own"
 grant select, insert, delete on table public.push_subscriptions to authenticated;
 
 -- 3. Trigger: send push notifications via Edge Function ───────
--- NOTE: app.send_push_url and app.send_push_key must be set via:
---   alter database postgres set app.send_push_url = 'https://<ref>.functions.supabase.co/send-push';
---   alter database postgres set app.send_push_key = '<service_role_key>';
+-- The send-push function URL is hardcoded in the function body below (it's a
+-- public URL, not a secret), so no database settings are needed.
 --
 -- pg_net.http_post is asynchronous and non-blocking: failures are logged
 -- but do not fail the notification insert. This is intentional — the
@@ -65,22 +63,12 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  send_url text := current_setting('app.send_push_url', true);
-  send_key text := current_setting('app.send_push_key', true);
 begin
-  -- If push isn't configured yet, do nothing — the in-app notification was
-  -- still created. This keeps notification inserts working before/without push.
-  if send_url is null or send_url = '' then
-    return new;
-  end if;
-
+  -- Fire a Web Push via the send-push Edge Function (async, non-blocking).
+  -- The function URL is public, so it's safe to hardcode here (no secret).
   perform net.http_post(
-    url := send_url,
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || coalesce(send_key, '')
-    ),
+    url := 'https://siphkouwkdbouktpmmpo.functions.supabase.co/send-push',
+    headers := jsonb_build_object('Content-Type', 'application/json'),
     body := jsonb_build_object(
       'recipient_id', new.recipient_id,
       'type', new.type,

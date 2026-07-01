@@ -11,12 +11,9 @@
  * Deploy:  supabase functions deploy send-push --no-verify-jwt
  */
 
-// @ts-expect-error Deno std import
-import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
-// @ts-expect-error Deno deps
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-// @ts-expect-error Deno deps — web-push implements the Web Push protocol (VAPID)
-import webpush from 'https://esm.sh/web-push@3.6.7';
+// npm: specifiers bundle reliably and give proper Node compat for web-push.
+import { createClient } from 'npm:@supabase/supabase-js@2.45.0';
+import webpush from 'npm:web-push@3.6.7';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -48,7 +45,8 @@ function urlFor(type: string): string {
   return '/notifications';
 }
 
-serve(async (req: Request) => {
+// deno-lint-ignore no-explicit-any
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   try {
