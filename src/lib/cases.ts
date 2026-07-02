@@ -238,16 +238,8 @@ export async function createCase(
 
     if (error) throw error;
 
-    // If assignedTo is set, create a notification
-    if (data && input.assignedTo) {
-      await sb.from('notifications').insert({
-        recipient_id: input.assignedTo,
-        type: 'case_assigned',
-        case_id: data.id,
-        ref_label: input.jobType,
-        note: input.instructions ?? null,
-      });
-    }
+    // Assignment notification + push are created by the kt_notify_case
+    // trigger (0017) — client-side inserts were silently blocked by RLS.
 
     return data ? rowToCase(data) : null;
   } catch (err) {
@@ -307,9 +299,6 @@ export async function setCaseStatus(
   try {
     const sb = getSupabase();
 
-    // Get the case first to find the assignee
-    const { data: caseData } = await sb.from('cases').select('*').eq('id', id).single();
-
     // Update the case
     const { data, error } = await sb
       .from('cases')
@@ -327,16 +316,8 @@ export async function setCaseStatus(
 
     if (error) throw error;
 
-    // If setting to 'needs_changes', notify the assignee
-    if (data && status === 'needs_changes' && caseData?.assigned_to) {
-      await sb.from('notifications').insert({
-        recipient_id: caseData.assigned_to,
-        type: 'case_needs_changes',
-        case_id: id,
-        ref_label: data.job_type,
-        note: reviewNote ?? null,
-      });
-    }
+    // The needs_changes notification + push are created by the
+    // kt_notify_case trigger (0017).
 
     return data ? rowToCase(data) : null;
   } catch (err) {

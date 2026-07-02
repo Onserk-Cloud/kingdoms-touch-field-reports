@@ -24,6 +24,12 @@ const dict: NsDict = {
     snooze: 'Snooze',
     timeNow: 'now',
     needAction: '{n} need action',
+    testTitle: 'Test notification',
+    testBody: 'Push notifications are working on this device.',
+    sendTest: 'Send test',
+    testSending: 'Sending…',
+    testSent: 'Sent — a push should arrive on this device in a few seconds.',
+    testError: 'Could not send the test. Try again.',
   },
   es: {
     title: 'Notificaciones',
@@ -48,6 +54,12 @@ const dict: NsDict = {
     snooze: 'Posponer',
     timeNow: 'ahora',
     needAction: '{n} por atender',
+    testTitle: 'Notificación de prueba',
+    testBody: 'Las notificaciones push funcionan en este dispositivo.',
+    sendTest: 'Enviar prueba',
+    testSending: 'Enviando…',
+    testSent: 'Enviada — el push debe llegar a este dispositivo en unos segundos.',
+    testError: 'No se pudo enviar la prueba. Intenta de nuevo.',
   },
 };
 

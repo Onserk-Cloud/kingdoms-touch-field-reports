@@ -1,0 +1,8 @@
+# The app moved to Vercel: https://kingdom-touch.vercel.app
+# This shim turns the OLD Netlify site (still connected to this repo via
+# Netlify's native Git integration) into a permanent redirect so nobody
+# lands on a stale build. Do not delete until the Netlify site itself is
+# deleted from the Netlify dashboard.
+[build]
+  command = "echo redirect-only"
+  publish = "netlify-redirect"

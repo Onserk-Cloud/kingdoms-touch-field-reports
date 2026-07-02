@@ -92,6 +92,31 @@ export async function snoozeNotification(id: string): Promise<void> {
   await markRead(id);
 }
 
+/**
+ * End-to-end push test: insert a self-notification so the DB trigger
+ * (`kt_push_on_notification`) fires a REAL push to this employee's devices.
+ * RLS only allows inserting rows whose recipient is the caller (0017).
+ */
+export async function sendTestNotification(recipientId: string): Promise<boolean> {
+  if (!HAS_SUPABASE) return false;
+  try {
+    const sb = getSupabase();
+    const { error } = await sb.from('notifications').insert({
+      recipient_id: recipientId,
+      type: 'test',
+      ref_label: 'Push test',
+    });
+    if (error) {
+      console.error('[KT] sendTestNotification failed', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[KT] sendTestNotification failed', err);
+    return false;
+  }
+}
+
 export async function markAllRead(recipientId: string): Promise<void> {
   if (HAS_SUPABASE) {
     const sb = getSupabase();

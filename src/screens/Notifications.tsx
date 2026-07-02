@@ -9,6 +9,7 @@ import {
   listNotifications,
   markAllRead,
   markRead,
+  sendTestNotification,
   snoozeNotification,
   type KtNotification,
 } from '../lib/notifications';
@@ -25,6 +26,7 @@ function titleKey(type: string): string {
   if (type === 'case_assigned') return 'notifications.caseAssignedTitle';
   if (type === 'case_needs_changes') return 'notifications.caseNeedsChangesTitle';
   if (type === 'case_due_soon') return 'notifications.caseDueSoonTitle';
+  if (type === 'test') return 'notifications.testTitle';
   return 'notifications.newReportTitle';
 }
 
@@ -34,6 +36,7 @@ function bodyKey(type: string): string {
   if (type === 'case_assigned') return 'notifications.caseAssignedBody';
   if (type === 'case_needs_changes') return 'notifications.caseNeedsChangesBody';
   if (type === 'case_due_soon') return 'notifications.caseDueSoonBody';
+  if (type === 'test') return 'notifications.testBody';
   return 'notifications.newReportBody';
 }
 
@@ -47,7 +50,7 @@ function kindOf(type: string): Kind {
   if (type === 'case_due_soon') return 'soon';
   // "Changes requested" shares the danger/triangle treatment: it needs action.
   if (NOTE_TYPES.includes(type)) return 'overdue';
-  if (type === 'reviewed') return 'done';
+  if (type === 'reviewed' || type === 'test') return 'done';
   if (type === 'case_assigned') return 'assigned';
   return 'review'; // new_report + unknown types
 }
@@ -80,6 +83,17 @@ export function Notifications() {
   const [pushState, setPushState] = useState<
     'idle' | 'enabling' | 'enabled' | 'denied' | 'unsupported' | 'error'
   >('idle');
+  const [testState, setTestState] = useState<'idle' | 'sending' | 'sent' | 'error'>(
+    'idle',
+  );
+
+  async function sendTest() {
+    if (!me) return;
+    setTestState('sending');
+    const ok = await sendTestNotification(me.id);
+    setTestState(ok ? 'sent' : 'error');
+    if (ok) setReloadKey((k) => k + 1);
+  }
 
   useEffect(() => {
     if (!isPushSupported()) {
@@ -452,12 +466,71 @@ export function Notifications() {
               borderRadius: 14,
               padding: '10px 12px',
               marginBottom: 14,
-              fontSize: 12.5,
-              fontWeight: 600,
-              color: colors.forestSoft,
             }}
           >
-            ✓ {t('push.enabled')}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: colors.forestSoft,
+                }}
+              >
+                ✓ {t('push.enabled')}
+              </span>
+              <button
+                onClick={() => void sendTest()}
+                disabled={testState === 'sending'}
+                className="kt-tap"
+                style={{
+                  minHeight: 44,
+                  padding: '0 14px',
+                  borderRadius: 11,
+                  border: `1px solid ${colors.forestSoft}`,
+                  background: '#fff',
+                  color: colors.forest,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                {testState === 'sending'
+                  ? t('notifications.testSending')
+                  : t('notifications.sendTest')}
+              </button>
+            </div>
+            {testState === 'sent' && (
+              <div
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: colors.forest,
+                  marginTop: 6,
+                }}
+              >
+                {t('notifications.testSent')}
+              </div>
+            )}
+            {testState === 'error' && (
+              <div
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: colors.danger,
+                  marginTop: 6,
+                }}
+              >
+                {t('notifications.testError')}
+              </div>
+            )}
           </div>
         ) : pushState !== 'unsupported' ? (
           <div
