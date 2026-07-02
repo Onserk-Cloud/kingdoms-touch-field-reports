@@ -42,8 +42,8 @@ jobs:
           VITE_DEFAULT_THEME: forest
         run: npm run build
 
-      # Deploy is handled by Netlify's native Git integration (public repo),
-      # so CI here only verifies the build + checks — no double deploy.
+      # Deploy is done manually with `vercel --prod` (host: Vercel), so CI
+      # here only verifies the build + checks — no deploy from Actions.
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
