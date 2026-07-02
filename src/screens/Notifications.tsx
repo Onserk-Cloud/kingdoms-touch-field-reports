@@ -90,6 +90,14 @@ export function Notifications() {
   async function sendTest() {
     if (!me) return;
     setTestState('sending');
+    // Make sure THIS device is actually registered before firing the test,
+    // otherwise the push has no target and only the in-app row appears.
+    const sub = await subscribeToPush(me.id);
+    if (sub.status !== 'granted') {
+      setTestState('error');
+      setPushState(sub.status === 'denied' ? 'denied' : 'error');
+      return;
+    }
     const ok = await sendTestNotification(me.id);
     setTestState(ok ? 'sent' : 'error');
     if (ok) setReloadKey((k) => k + 1);
@@ -101,10 +109,30 @@ export function Notifications() {
       return;
     }
     const perm = getPushPermission();
-    if (perm === 'granted') setPushState('enabled');
-    else if (perm === 'denied') setPushState('denied');
-    else setPushState('idle');
-  }, []);
+    if (perm === 'denied') {
+      setPushState('denied');
+      return;
+    }
+    if (perm === 'granted' && me) {
+      // Permission granted != this device is registered server-side. Re-run
+      // the subscribe so the push_subscriptions row exists (self-heals a
+      // device that granted permission on an older build/origin).
+      setPushState('enabling');
+      void subscribeToPush(me.id).then((res) => {
+        setPushState(
+          res.status === 'granted'
+            ? 'enabled'
+            : res.status === 'denied'
+              ? 'denied'
+              : res.status === 'unsupported'
+                ? 'unsupported'
+                : 'error',
+        );
+      });
+      return;
+    }
+    setPushState('idle');
+  }, [me]);
 
   async function enablePush() {
     if (!me) return;

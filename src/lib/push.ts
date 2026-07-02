@@ -57,12 +57,13 @@ export async function subscribeToPush(
       return { status: 'unsupported' };
     }
 
-    // Request notification permission
-    const permission = await Notification.requestPermission();
-    if (permission === 'denied') {
-      return { status: 'denied' };
+    // Request permission only if it hasn't been decided yet. When it's already
+    // 'granted' we still continue below to (re)register the subscription — the
+    // permission being granted does NOT mean this device is stored server-side.
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
     }
-
     if (permission !== 'granted') {
       return { status: 'denied' };
     }
@@ -81,11 +82,17 @@ export async function subscribeToPush(
       };
     }
 
-    // Subscribe to push notifications
-    const subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
-    });
+    // Reuse the existing push subscription for this SW if there is one;
+    // otherwise create it. (A returning device already has one.)
+    let subscription = await reg.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          vapidPublicKey,
+        ) as BufferSource,
+      });
+    }
 
     // Extract subscription details
     const subJson = subscription.toJSON();
@@ -100,23 +107,31 @@ export async function subscribeToPush(
       };
     }
 
-    // Store subscription in Supabase if configured
+    // Store subscription in Supabase. THE ERROR IS CHECKED — a silently
+    // failed upsert here was the original "push works in-app but not on the
+    // device" bug (the row was never stored, so send-push had no target).
     if (HAS_SUPABASE) {
       const sb = getSupabase();
-      const userAgent = navigator.userAgent;
-
-      await sb.from('push_subscriptions').upsert({
-        employee_id: employeeId,
-        endpoint,
-        p256dh,
-        auth,
-        user_agent: userAgent,
-      });
+      const { error } = await sb.from('push_subscriptions').upsert(
+        {
+          employee_id: employeeId,
+          endpoint,
+          p256dh,
+          auth,
+          user_agent: navigator.userAgent,
+        },
+        { onConflict: 'endpoint' },
+      );
+      if (error) {
+        console.error('[KT] push subscription store failed', error);
+        return { status: 'error', error: `store: ${error.message}` };
+      }
     }
 
     return { status: 'granted', subscription };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    console.error('[KT] subscribeToPush failed', error);
     return { status: 'error', error: message };
   }
 }
