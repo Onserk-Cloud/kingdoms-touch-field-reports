@@ -1,6 +1,7 @@
 ﻿import { HAS_SUPABASE, getSupabase } from './supabase';
 import { compressPhoto } from './compress';
 import { getPhotoUrl } from './uploader';
+import { relativeDate } from './format';
 import type { BadgeKind } from '../components/Badge';
 
 export interface Case {
@@ -16,10 +17,24 @@ export interface Case {
   remind: boolean;
   instructions: string | null;
   assignmentGroup: string | null;
-  status: 'available' | 'assigned' | 'in_progress' | 'submitted' | 'needs_changes' | 'closed';
+  status:
+    | 'available'
+    | 'assigned'
+    | 'in_progress'
+    | 'submitted'
+    | 'in_review'
+    | 'needs_changes'
+    | 'approved'
+    | 'closed';
   reportId: string | null;
   reviewNote: string | null;
   createdAt: string;
+  /** Free-text estimate of time on task (maps est_time). */
+  estTime: string | null;
+  /** Joined assignee profile (populated by listAllCases; null otherwise). */
+  assigneeName?: string | null;
+  assigneeInitials?: string | null;
+  assigneeColor?: string | null;
 }
 
 /**
@@ -43,6 +58,10 @@ const DEMO_CASES: Case[] = [
     reportId: null,
     reviewNote: null,
     createdAt: new Date().toISOString(),
+    estTime: null,
+    assigneeName: null,
+    assigneeInitials: null,
+    assigneeColor: null,
   },
 ];
 
@@ -65,6 +84,11 @@ function rowToCase(row: any): Case {
     reportId: row.report_id as string | null,
     reviewNote: row.review_note as string | null,
     createdAt: row.created_at as string,
+    estTime: (row.est_time ?? null) as string | null,
+    // `assignee` is only present when the query joins it; tolerate its absence.
+    assigneeName: (row.assignee?.name ?? null) as string | null,
+    assigneeInitials: (row.assignee?.initials ?? null) as string | null,
+    assigneeColor: (row.assignee?.avatar_color ?? null) as string | null,
   };
 }
 
@@ -106,7 +130,7 @@ export async function listAllCases(): Promise<Case[]> {
     const sb = getSupabase();
     const { data, error } = await sb
       .from('cases')
-      .select('*')
+      .select('*, assignee:employees!assigned_to(name, initials, avatar_color)')
       .order('created_at', { ascending: false })
       .limit(100);
 
@@ -148,6 +172,7 @@ export interface CreateCaseInput {
   priority: 'urgent' | 'high' | 'medium' | 'low';
   dueDate?: string | null;
   dueTime?: string | null;
+  estTime?: string | null;
   remind?: boolean;
   instructions?: string | null;
   assignedTo?: string | null;
@@ -179,6 +204,10 @@ export async function createCase(
       reportId: null,
       reviewNote: null,
       createdAt: new Date().toISOString(),
+      estTime: input.estTime ?? null,
+      assigneeName: null,
+      assigneeInitials: null,
+      assigneeColor: null,
     };
     DEMO_CASES.push(newCase);
     return newCase;
@@ -199,6 +228,7 @@ export async function createCase(
         priority: input.priority,
         due_date: input.dueDate ?? null,
         due_time: input.dueTime ?? null,
+        est_time: input.estTime ?? null,
         remind: input.remind ?? true,
         instructions: input.instructions ?? null,
         status: input.assignedTo ? 'assigned' : 'available',
@@ -286,7 +316,10 @@ export async function setCaseStatus(
       .update({
         status,
         review_note: reviewNote ?? null,
-        closed_at: status === 'closed' ? new Date().toISOString() : null,
+        closed_at:
+          status === 'closed' || status === 'approved'
+            ? new Date().toISOString()
+            : null,
       })
       .eq('id', id)
       .select('*')
@@ -326,6 +359,7 @@ export async function updateCase(
       if (patch.priority !== undefined) c.priority = patch.priority;
       if (patch.dueDate !== undefined) c.dueDate = patch.dueDate ?? null;
       if (patch.dueTime !== undefined) c.dueTime = patch.dueTime ?? null;
+      if (patch.estTime !== undefined) c.estTime = patch.estTime ?? null;
       if (patch.remind !== undefined) c.remind = patch.remind ?? true;
       if (patch.instructions !== undefined) c.instructions = patch.instructions ?? null;
       if (patch.assignedTo !== undefined) c.assignedTo = patch.assignedTo ?? null;
@@ -341,6 +375,7 @@ export async function updateCase(
     if (patch.priority !== undefined) row.priority = patch.priority;
     if (patch.dueDate !== undefined) row.due_date = patch.dueDate ?? null;
     if (patch.dueTime !== undefined) row.due_time = patch.dueTime ?? null;
+    if (patch.estTime !== undefined) row.est_time = patch.estTime ?? null;
     if (patch.remind !== undefined) row.remind = patch.remind ?? true;
     if (patch.instructions !== undefined) row.instructions = patch.instructions ?? null;
     if (patch.assignedTo !== undefined) {
@@ -369,7 +404,9 @@ export const CASE_STATUS_ORDER: Case['status'][] = [
   'assigned',
   'in_progress',
   'submitted',
+  'in_review',
   'needs_changes',
+  'approved',
   'closed',
 ];
 
@@ -381,12 +418,17 @@ export function caseStatusBadge(status: Case['status']): BadgeKind {
     case 'available':
       return 'draft';
     case 'assigned':
-    case 'in_progress':
       return 'pending';
+    case 'in_progress':
+      return 'inProgress';
     case 'submitted':
       return 'submitted';
+    case 'in_review':
+      return 'inReview';
     case 'needs_changes':
       return 'flagged';
+    case 'approved':
+      return 'reviewed';
     case 'closed':
       return 'reviewed';
     default:
@@ -409,6 +451,30 @@ export function priorityColor(
   if (priority === 'high') return colors.danger ?? '#A04A2E';
   if (priority === 'low') return colors.muted;
   return colors.gold;
+}
+
+/**
+ * Short human reference for a case, e.g. `KT-2026-1A2B`.
+ * Mirrors the pattern in `format.ts` shortReportId but accepts a Case or an id.
+ */
+export function caseRef(c: Case | string): string {
+  const id = typeof c === 'string' ? c : c.id;
+  const tail = id.replace(/-/g, '').slice(-4).toUpperCase();
+  return `KT-${new Date().getFullYear()}-${tail}`;
+}
+
+/**
+ * Pure, locale-aware short due label (no i18n `t` needed): defers to
+ * `relativeDate()` from format.ts, appending the time when supplied.
+ * Returns '' when there is no due date.
+ */
+export function dueLabel(
+  dueDate: string | null,
+  dueTime?: string | null,
+): string {
+  if (!dueDate) return '';
+  const base = relativeDate(dueDate);
+  return dueTime ? `${base} · ${dueTime}` : base;
 }
 
 // ─── Case photos (reference by staff, evidence by the assigned employee) ────

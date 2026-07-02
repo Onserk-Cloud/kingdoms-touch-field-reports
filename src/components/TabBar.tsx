@@ -147,6 +147,9 @@ export function TabBar({ active }: TabBarProps) {
               paddingTop: 12,
               position: 'relative',
               color: c,
+              // Full-height tappable target (>=44px) without changing layout.
+              alignSelf: 'stretch',
+              minHeight: 44,
             }}
             className="kt-tap"
           >
@@ -313,6 +316,9 @@ export function AdminTabBar({ active }: { active: AdminTab['k'] }) {
               paddingTop: 12,
               position: 'relative',
               color: c,
+              // Full-height tappable target (>=44px) without changing layout.
+              alignSelf: 'stretch',
+              minHeight: 44,
             }}
           >
             {on && (

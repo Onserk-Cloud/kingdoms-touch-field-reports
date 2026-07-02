@@ -30,6 +30,9 @@ export interface KtColors {
   danger: string;
   dangerSoft: string;
   dangerLine: string;
+  /** In-progress / informational accent (case lifecycle "in progress"). */
+  blue: string;
+  blueSoft: string;
 }
 
 /** Forest & Gold — premium nature-services palette (default) */
@@ -53,6 +56,8 @@ export const FOREST_GOLD: KtColors = {
   danger: '#A04A2E',
   dangerSoft: 'rgba(160,74,46,0.12)',
   dangerLine: 'rgba(160,74,46,0.28)',
+  blue: '#3A78A0',
+  blueSoft: 'rgba(58,110,150,0.14)',
 };
 
 export const THEMES: Record<ThemeName, KtColors> = {
@@ -102,7 +107,7 @@ function kebab(s: string): string {
 /** Shared typography tokens. */
 export const FONTS = {
   body: "'Manrope', system-ui, -apple-system, Segoe UI, sans-serif",
-  display: "'Cinzel', Georgia, 'Times New Roman', serif",
+  display: "'Fraunces', Georgia, 'Times New Roman', serif",
   mono: "'ui-monospace', 'SF Mono', Menlo, monospace",
 };
 

@@ -107,7 +107,7 @@ export function ManageCases() {
             </div>
             <div
               style={{
-                fontFamily: 'Cinzel, Georgia, serif',
+                fontFamily: 'Fraunces, Georgia, serif',
                 fontSize: 20,
                 fontWeight: 500,
                 color: colors.charcoal,
@@ -305,7 +305,7 @@ function SummaryStat({
     >
       <div
         style={{
-          fontFamily: 'Cinzel, Georgia, serif',
+          fontFamily: 'Fraunces, Georgia, serif',
           fontSize: 26,
           fontWeight: 500,
           color: tint,

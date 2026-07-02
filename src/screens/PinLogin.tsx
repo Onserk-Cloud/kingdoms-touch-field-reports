@@ -244,7 +244,7 @@ export function PinLogin() {
         <div style={{ marginTop: 'auto', textAlign: 'center' }}>
           <div
             style={{
-              fontFamily: 'Cinzel, Georgia, serif',
+              fontFamily: 'Fraunces, Georgia, serif',
               fontSize: 28,
               fontWeight: 500,
               color: colors.charcoal,

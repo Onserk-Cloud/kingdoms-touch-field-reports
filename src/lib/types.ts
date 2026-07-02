@@ -74,6 +74,8 @@ export interface OfflineReport {
   error?: string;
   /** Note from the reviewer explaining what to fix (set on "request changes"). */
   reviewNote?: string;
+  /** Optional priority carried from a linked case (used later by My Tickets). */
+  priority?: 'urgent' | 'high' | 'medium' | 'low';
 }
 
 export interface OfflinePhoto {

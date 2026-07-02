@@ -164,6 +164,14 @@ input[type='number'] {
   font-family: inherit;
 }
 
+/* Keyboard focus still gets a visible ring even though the resting state has
+   outline:none (the wrapper carries the field look). */
+.kt-input:focus-visible {
+  outline: 2px solid var(--kt-gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 .kt-input::placeholder {
   color: var(--kt-muted);
 }
@@ -210,5 +218,31 @@ textarea.kt-input {
   }
   .kt-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ─── A11y ────────────────────────────────────────────────────
+   Global keyboard focus ring (gold accent). Only shows for
+   keyboard/AT users via :focus-visible — pointer taps stay clean. */
+:where(button, a, [role='button'], input, textarea, select, .kt-tap):focus-visible {
+  outline: 2px solid var(--kt-gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Field wrapper gains a forest border + subtle ring when its input is focused. */
+.kt-field:focus-within {
+  border-color: var(--kt-forest);
+  box-shadow: 0 0 0 3px rgba(31, 61, 43, 0.08);
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

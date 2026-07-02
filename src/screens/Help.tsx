@@ -137,7 +137,7 @@ export function Help() {
             >
               <div
                 style={{
-                  fontFamily: 'Cinzel, Georgia, serif',
+                  fontFamily: 'Fraunces, Georgia, serif',
                   fontSize: 16,
                   fontWeight: 600,
                   color: colors.forest,

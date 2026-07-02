@@ -554,7 +554,7 @@ export function SupervisorDetail() {
 
         <div
           style={{
-            fontFamily: 'Cinzel, Georgia, serif',
+            fontFamily: 'Fraunces, Georgia, serif',
             fontSize: 22,
             fontWeight: 500,
             color: colors.charcoal,
@@ -1011,7 +1011,7 @@ export function SupervisorDetail() {
           >
             <div
               style={{
-                fontFamily: 'Cinzel, Georgia, serif',
+                fontFamily: 'Fraunces, Georgia, serif',
                 fontSize: 18,
                 color: colors.charcoal,
                 marginBottom: 10,

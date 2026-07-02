@@ -53,25 +53,40 @@ export function AppBar({
           className="kt-tap"
           aria-label={t('common.back')}
           style={{
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            background: dark ? 'rgba(255,255,255,0.10)' : colors.ivory,
+            // >=44x44 tappable area; the visual chip stays ~38px inside.
+            minWidth: 44,
+            minHeight: 44,
+            // Pull the enlarged hit-box back so layout/spacing is unchanged.
+            margin: -3,
+            borderRadius: 14,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          <svg width="9" height="16" viewBox="0 0 9 16" fill="none">
-            <path
-              d="M8 1L1 8L8 15"
-              stroke={txt}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <span
+            aria-hidden
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              background: dark ? 'rgba(255,255,255,0.10)' : colors.ivory,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="9" height="16" viewBox="0 0 9 16" fill="none">
+              <path
+                d="M8 1L1 8L8 15"
+                stroke={txt}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
         </button>
       )}
       <div style={{ flex: 1, lineHeight: 1.1, minWidth: 0 }}>
@@ -91,7 +106,7 @@ export function AppBar({
         )}
         <div
           style={{
-            fontFamily: 'Cinzel, Georgia, serif',
+            fontFamily: 'Fraunces, Georgia, serif',
             fontSize: 19,
             fontWeight: 600,
             color: txt,

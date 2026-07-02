@@ -182,7 +182,7 @@ export function Review() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  fontFamily: 'Cinzel, Georgia, serif',
+                  fontFamily: 'Fraunces, Georgia, serif',
                   fontSize: 20,
                   fontWeight: 500,
                   color: colors.charcoal,

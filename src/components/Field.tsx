@@ -53,6 +53,7 @@ export function Field({
         {rightSlot}
       </div>
       <div
+        className="kt-field"
         style={{
           background: '#fff',
           borderRadius: 14,
@@ -61,6 +62,7 @@ export function Field({
           minHeight: height ?? (multi ? 84 : 52),
           display: 'flex',
           alignItems: multi ? 'flex-start' : 'center',
+          transition: 'border-color 140ms ease, box-shadow 140ms ease',
         }}
       >
         {multi ? (

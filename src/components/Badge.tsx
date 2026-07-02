@@ -7,7 +7,9 @@ export type BadgeKind =
   | 'reviewed'
   | 'completed'
   | 'flagged'
-  | 'draft';
+  | 'draft'
+  | 'inProgress'
+  | 'inReview';
 
 interface BadgeProps {
   kind: BadgeKind;
@@ -57,6 +59,18 @@ export function Badge({ kind, label }: BadgeProps) {
       fg: colors.muted,
       label: t('badge.draft'),
       dot: colors.muted,
+    },
+    inProgress: {
+      bg: colors.blueSoft,
+      fg: '#2E5F80',
+      label: t('badge.inProgress'),
+      dot: colors.blue,
+    },
+    inReview: {
+      bg: 'rgba(196,152,76,0.16)',
+      fg: colors.goldDeep,
+      label: t('badge.inReview'),
+      dot: colors.gold,
     },
   };
 

@@ -277,7 +277,7 @@ export function Supervisor() {
         </div>
         <div
           style={{
-            fontFamily: 'Cinzel, Georgia, serif',
+            fontFamily: 'Fraunces, Georgia, serif',
             fontSize: 24,
             fontWeight: 500,
             letterSpacing: -0.4,
@@ -435,7 +435,7 @@ export function Supervisor() {
             >
               <div
                 style={{
-                  fontFamily: 'Cinzel, Georgia, serif',
+                  fontFamily: 'Fraunces, Georgia, serif',
                   fontSize: 24,
                   fontWeight: 600,
                   color: k.color,

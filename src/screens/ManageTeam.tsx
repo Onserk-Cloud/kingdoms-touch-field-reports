@@ -332,7 +332,7 @@ export function ManageTeam() {
             >
               <div
                 style={{
-                  fontFamily: 'Cinzel, Georgia, serif',
+                  fontFamily: 'Fraunces, Georgia, serif',
                   fontSize: 16,
                   color: colors.charcoal,
                   marginBottom: 12,
@@ -580,7 +580,7 @@ export function ManageTeam() {
           >
             <div
               style={{
-                fontFamily: 'Cinzel, Georgia, serif',
+                fontFamily: 'Fraunces, Georgia, serif',
                 fontSize: 18,
                 color: colors.charcoal,
                 marginBottom: 12,

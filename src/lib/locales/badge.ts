@@ -7,6 +7,8 @@ const dict: NsDict = {
     completed: 'Completed',
     flagged: 'Needs Update',
     draft: 'Draft',
+    inProgress: 'In progress',
+    inReview: 'In review',
   },
   es: {
     submitted: 'Enviado',
@@ -15,6 +17,8 @@ const dict: NsDict = {
     completed: 'Completado',
     flagged: 'Falta actualizar',
     draft: 'Borrador',
+    inProgress: 'En progreso',
+    inReview: 'En revisión',
   },
 };
 export default dict;

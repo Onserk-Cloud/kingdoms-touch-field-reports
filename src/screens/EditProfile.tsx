@@ -173,7 +173,7 @@ export function EditProfile() {
     >
       <div
         style={{
-          fontFamily: 'Cinzel, Georgia, serif',
+          fontFamily: 'Fraunces, Georgia, serif',
           fontSize: 18,
           fontWeight: 600,
           color: colors.charcoal,
@@ -255,7 +255,7 @@ export function EditProfile() {
                   borderRadius: '50%',
                   background: avatarColor,
                   color: '#fff',
-                  fontFamily: 'Cinzel, Georgia, serif',
+                  fontFamily: 'Fraunces, Georgia, serif',
                   fontSize: 32,
                   fontWeight: 600,
                   display: 'flex',
@@ -317,7 +317,7 @@ export function EditProfile() {
           <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <div
               style={{
-                fontFamily: 'Cinzel, Georgia, serif',
+                fontFamily: 'Fraunces, Georgia, serif',
                 fontSize: 22,
                 fontWeight: 600,
                 color: colors.charcoal,

@@ -116,7 +116,7 @@ export function Home() {
             <LogoMark variant="white" size={24} />
             <span
               style={{
-                fontFamily: 'Cinzel, Georgia, serif',
+                fontFamily: 'Fraunces, Georgia, serif',
                 fontSize: 13,
                 fontWeight: 600,
                 letterSpacing: 1.4,
@@ -216,7 +216,7 @@ export function Home() {
         </div>
         <div
           style={{
-            fontFamily: 'Cinzel, Georgia, serif',
+            fontFamily: 'Fraunces, Georgia, serif',
             fontSize: 30,
             fontWeight: 500,
             letterSpacing: -0.4,
@@ -376,7 +376,7 @@ export function Home() {
                   fontSize: 24,
                   fontWeight: 700,
                   color: s.color,
-                  fontFamily: 'Cinzel, Georgia, serif',
+                  fontFamily: 'Fraunces, Georgia, serif',
                   letterSpacing: -0.3,
                 }}
               >

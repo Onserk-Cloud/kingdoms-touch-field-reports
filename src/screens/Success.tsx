@@ -114,7 +114,7 @@ export function Success() {
           </div>
           <div
             style={{
-              fontFamily: 'Cinzel, Georgia, serif',
+              fontFamily: 'Fraunces, Georgia, serif',
               fontSize: 30,
               fontWeight: 500,
               color: colors.charcoal,
