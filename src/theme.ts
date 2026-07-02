@@ -40,8 +40,9 @@ export const FOREST_GOLD: KtColors = {
   forest: '#1F3D2B',
   forestDeep: '#15291D',
   forestSoft: '#2A5238',
-  gold: '#C4984C',
-  goldSoft: '#E0C079',
+  // Brand gold per the Material design source (kt-primitives).
+  gold: '#C9A24D',
+  goldSoft: '#E2C485',
   // Darkened from #9C7228 to meet WCAG AA (4.5:1) for small label text on ivory.
   goldDeep: '#8A6420',
   charcoal: '#1A1A1A',

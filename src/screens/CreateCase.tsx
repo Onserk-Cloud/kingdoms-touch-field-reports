@@ -6,7 +6,7 @@ import { CaseForm } from '../components/CaseForm';
 import { useTheme } from '../theme-context';
 import { useI18n } from '../lib/i18n';
 import { useSessionStore } from '../store/session';
-import { createCase } from '../lib/cases';
+import { createCase, uploadCasePhoto } from '../lib/cases';
 import type { CreateCaseInput } from '../lib/cases';
 
 export function CreateCase() {
@@ -17,12 +17,16 @@ export function CreateCase() {
 
   const [saving, setSaving] = useState(false);
 
-  async function handleCreate(input: CreateCaseInput) {
+  async function handleCreate(input: CreateCaseInput, photos: File[]) {
     if (!employee) return;
     setSaving(true);
     try {
       const newCase = await createCase(input, employee.id);
       if (newCase) {
+        // Attach staged reference photos to the freshly created case.
+        for (const f of photos) {
+          await uploadCasePhoto(newCase.id, f, employee.id);
+        }
         navigate(`/cases/${newCase.id}`);
       }
     } finally {
@@ -36,6 +40,20 @@ export function CreateCase() {
         title={t('cases.createTitle')}
         eyebrow={t('cases.eyebrow')}
         onBack={() => navigate('/cases')}
+        trailing={
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: colors.forest,
+              padding: '8px 12px',
+              borderRadius: 10,
+              background: colors.ivory,
+            }}
+          >
+            {t('cases.draft')}
+          </div>
+        }
       />
 
       <div
@@ -52,7 +70,10 @@ export function CreateCase() {
       >
         <CaseForm
           submitting={saving}
-          submitLabel={t(saving ? 'cases.creating' : 'cases.createCase')}
+          withPhotos
+          submitColor="gold"
+          submitLabel={t(saving ? 'cases.creating' : 'cases.createAssign')}
+          submitHint={t('cases.createHint')}
           onSubmit={handleCreate}
         />
       </div>
