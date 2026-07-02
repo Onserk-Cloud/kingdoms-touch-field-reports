@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
-import { Badge, type BadgeKind } from '../components/Badge';
 import { useTheme } from '../theme-context';
 import { useI18n } from '../lib/i18n';
 import { useSessionStore } from '../store/session';
@@ -30,6 +29,31 @@ function roleLabel(r: Role, t: (k: string) => string): string {
           : 'common.roleEmployee',
   );
 }
+
+/** Muted one-line description shown under each member's name. */
+function roleMetaKey(r: Role): string {
+  return r === 'super_admin'
+    ? 'manage.metaSuperAdmin'
+    : r === 'admin'
+      ? 'manage.metaAdmin'
+      : r === 'supervisor'
+        ? 'manage.metaSupervisor'
+        : 'manage.metaEmployee';
+}
+
+/** Display order for the role legend chips under the app bar. */
+const ROLE_ORDER: Role[] = ['super_admin', 'admin', 'supervisor', 'employee'];
+
+/** Column letters of the static permissions matrix (S/A/V/E). */
+type RoleLetter = 'S' | 'A' | 'V' | 'E';
+const ROLE_LETTERS: RoleLetter[] = ['S', 'A', 'V', 'E'];
+const PERM_ROWS: { key: string; allowed: RoleLetter[] }[] = [
+  { key: 'manage.permCreate', allowed: ['S', 'A', 'V'] },
+  { key: 'manage.permReview', allowed: ['S', 'A', 'V'] },
+  { key: 'manage.permManage', allowed: ['S', 'A'] },
+  { key: 'manage.permComplete', allowed: ['E'] },
+  { key: 'manage.permBilling', allowed: ['S'] },
+];
 
 const labelStyle = (colors: KtColors) => ({
   fontSize: 10.5,
@@ -275,12 +299,16 @@ export function ManageTeam() {
   const canReset =
     resetMethod === 'pin' ? /^\d{4}$/.test(resetPin) : resetPwd.length >= 6;
 
-  const badgeForRole = (r: Role): BadgeKind =>
-    r === 'employee'
-      ? 'submitted'
-      : r === 'supervisor'
-        ? 'pending'
-        : 'reviewed';
+  // Per-role identity color: Super Admin=gold, Admin=goldDeep,
+  // Supervisor=blue, Employee=forestSoft (Admin never reads as Super Admin).
+  const roleColor = (r: Role): string =>
+    r === 'super_admin'
+      ? colors.gold
+      : r === 'admin'
+        ? colors.goldDeep
+        : r === 'supervisor'
+          ? colors.blue
+          : colors.forestSoft;
 
   const canSubmit =
     firstName.trim().length > 1 &&
@@ -292,19 +320,56 @@ export function ManageTeam() {
     <PhoneFrame bg={colors.ivory}>
       <AppBar
         title={t('manage.title')}
-        eyebrow={t('manage.eyebrow')}
+        eyebrow={
+          list.length > 0
+            ? t('manage.membersCount', { n: list.length })
+            : t('manage.eyebrow')
+        }
         onBack={() => navigate('/supervisor')}
       />
+      {/* Role legend — one chip per role, colored like the roster pills. */}
+      <div
+        style={{
+          padding: '12px 20px 0',
+          display: 'flex',
+          gap: 10,
+          flexWrap: 'wrap',
+        }}
+      >
+        {ROLE_ORDER.map((r) => (
+          <span
+            key={r}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              fontSize: 10.5,
+              fontWeight: 700,
+              color: colors.muted,
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 2,
+                background: roleColor(r),
+              }}
+            />
+            {roleLabel(r, t)}
+          </span>
+        ))}
+      </div>
       <div
         className="kt-scroll"
         style={{
           position: 'absolute',
-          top: 110,
+          top: 148,
           bottom: 0,
           left: 0,
           right: 0,
           overflow: 'auto',
-          padding: '18px 20px 40px',
+          padding: '14px 20px 40px',
         }}
       >
         {!HAS_SUPABASE ? (
@@ -450,14 +515,17 @@ export function ManageTeam() {
                 {t('manage.empty')}
               </div>
             )}
-            {list.map((m) => (
+            {list.map((m) => {
+              const isMe = me?.id === m.id;
+              const rc = roleColor(m.role);
+              return (
               <div
                 key={m.id}
                 style={{
                   background: '#fff',
-                  border: `1px solid ${colors.line}`,
-                  borderRadius: 14,
-                  padding: '12px 14px',
+                  border: `1px solid ${isMe ? colors.gold : colors.line}`,
+                  borderRadius: 16,
+                  padding: 13,
                   marginBottom: 10,
                   display: 'flex',
                   alignItems: 'center',
@@ -466,8 +534,8 @@ export function ManageTeam() {
               >
                 <div
                   style={{
-                    width: 40,
-                    height: 40,
+                    width: 44,
+                    height: 44,
                     borderRadius: '50%',
                     background: m.avatar_color ?? '#7FA66E',
                     color: '#fff',
@@ -475,7 +543,7 @@ export function ManageTeam() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 700,
-                    fontSize: 13,
+                    fontSize: 14,
                     opacity: m.active ? 1 : 0.4,
                     flexShrink: 0,
                   }}
@@ -484,20 +552,77 @@ export function ManageTeam() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: colors.charcoal,
+                        fontSize: 14.5,
+                        letterSpacing: -0.1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {m.name}
+                    </span>
+                    {isMe && (
+                      <span
+                        style={{
+                          fontSize: 9.5,
+                          fontWeight: 800,
+                          color: colors.goldDeep,
+                          letterSpacing: 0.5,
+                          textTransform: 'uppercase',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {t('manage.you')}
+                      </span>
+                    )}
+                  </div>
+                  <div
                     style={{
-                      fontWeight: 700,
-                      color: colors.charcoal,
-                      fontSize: 14,
+                      fontSize: 12,
+                      color: colors.muted,
+                      marginTop: 2,
+                      fontWeight: 500,
                     }}
                   >
-                    {m.name}
-                    {me?.id === m.id ? ` · ${t('manage.you')}` : ''}
+                    {m.active
+                      ? t(roleMetaKey(m.role))
+                      : `${t(roleMetaKey(m.role))} · ${t('manage.inactiveLabel')}`}
                   </div>
-                  <div style={{ marginTop: 4 }}>
-                    <Badge
-                      kind={badgeForRole(m.role)}
-                      label={roleLabel(m.role, t)}
-                    />
+                  <div style={{ marginTop: 7 }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '3px 9px',
+                        borderRadius: 999,
+                        background:
+                          m.role === 'super_admin'
+                            ? 'rgba(196,152,76,0.18)'
+                            : `${rc}22`,
+                        color: rc,
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: 0.6,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: 999,
+                          background: rc,
+                        }}
+                      />
+                      {roleLabel(m.role, t)}
+                    </span>
                   </div>
                 </div>
                 <div
@@ -536,7 +661,7 @@ export function ManageTeam() {
                   >
                     {t('manage.unlock')}
                   </button>
-                  {me?.id !== m.id && (
+                  {!isMe && (
                     <button
                       onClick={() => toggleActive(m)}
                       className="kt-tap"
@@ -554,9 +679,91 @@ export function ManageTeam() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </>
         )}
+
+        {/* Permissions — static capability matrix per role (S/A/V/E). */}
+        <div
+          style={{
+            marginTop: 8,
+            background: '#fff',
+            borderRadius: 16,
+            padding: 16,
+            border: `1px solid ${colors.line}`,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: colors.goldDeep,
+              letterSpacing: 1.4,
+              textTransform: 'uppercase',
+              marginBottom: 12,
+            }}
+          >
+            {t('manage.permissions')}
+          </div>
+          {PERM_ROWS.map((p, i) => (
+            <div
+              key={p.key}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                padding: '9px 0',
+                borderBottom:
+                  i < PERM_ROWS.length - 1
+                    ? `1px solid ${colors.line}`
+                    : 'none',
+              }}
+            >
+              <span
+                style={{ fontSize: 12.5, fontWeight: 600, color: colors.ink }}
+              >
+                {t(p.key)}
+              </span>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                {ROLE_LETTERS.map((l) => {
+                  const on = p.allowed.includes(l);
+                  return (
+                    <span
+                      key={l}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 6,
+                        fontSize: 9.5,
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: on ? colors.forest : colors.ivoryDeep,
+                        color: on ? colors.gold : 'rgba(0,0,0,0.20)',
+                      }}
+                    >
+                      {l}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <div
+            style={{
+              fontSize: 10,
+              color: colors.muted,
+              marginTop: 10,
+              fontWeight: 600,
+              letterSpacing: 0.3,
+            }}
+          >
+            {`S ${t('common.roleSuperAdmin')} · A ${t('common.roleAdmin')} · V ${t('common.roleSupervisor')} · E ${t('common.roleEmployee')}`}
+          </div>
+        </div>
       </div>
       {resetFor && (
         <div

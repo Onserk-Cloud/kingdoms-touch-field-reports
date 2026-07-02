@@ -42,89 +42,138 @@ export function Splash() {
         }}
       />
 
-      {/* Centered official logo + tagline */}
+      {/*
+        Landscape scroll fix: the shell fills the phone surface (100svh on a
+        real device via PhoneFrame) as a flex column that scrolls vertically,
+        so a rotated / short viewport scrolls instead of clipping the lockup.
+      */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 40,
-          textAlign: 'center',
-        }}
-      >
-        <FullLogo variant="white" width={252} />
-        <div
-          style={{
-            width: 40,
-            height: 1,
-            background: colors.gold,
-            margin: '30px 0 16px',
-          }}
-        />
-        <div
-          style={{
-            fontFamily: "'Cormorant Garamond', Georgia, serif",
-            fontStyle: 'italic',
-            fontSize: 20,
-            color: colors.goldSoft,
-            letterSpacing: 0.3,
-            lineHeight: 1.3,
-            maxWidth: '78%',
-          }}
-        >
-          {t('splash.subtitle')}
-        </div>
-      </div>
-
-      {/* Loader */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 60,
-          left: 0,
-          right: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 14,
+          overflowY: 'auto',
         }}
       >
         <div
           style={{
-            width: 120,
-            height: 3,
-            borderRadius: 3,
-            background: 'rgba(255,255,255,0.10)',
-            overflow: 'hidden',
-            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            minHeight: '100%',
+            padding: '54px 40px 60px',
+            textAlign: 'center',
           }}
         >
+          {/* Layered brand lockup — auto margins centre it when space allows,
+              collapse to top-aligned flow when the viewport is short. */}
           <div
             style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              height: '100%',
-              width: '62%',
-              background: colors.gold,
-              borderRadius: 3,
-              animation: 'kt-loader 1.6s ease-in-out infinite',
+              margin: 'auto 0',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
-          />
-        </div>
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            color: 'rgba(255,255,255,0.45)',
-            letterSpacing: 2.5,
-            textTransform: 'uppercase',
-          }}
-        >
-          {t('splash.version', { status: t('splash.loading') })}
+          >
+            <div
+              style={{
+                fontFamily: 'Fraunces, Georgia, serif',
+                fontStyle: 'italic',
+                fontSize: 13,
+                fontWeight: 600,
+                color: colors.goldSoft,
+                letterSpacing: 6,
+                marginBottom: 14,
+              }}
+            >
+              {t('splash.eyebrow')}
+            </div>
+
+            <FullLogo variant="white" width={252} />
+
+            <div
+              style={{
+                width: 36,
+                height: 1,
+                background: colors.gold,
+                margin: '28px 0 18px',
+              }}
+            />
+
+            <div
+              style={{
+                fontFamily: 'Fraunces, Georgia, serif',
+                fontSize: 28,
+                fontWeight: 500,
+                color: '#fff',
+                letterSpacing: -0.5,
+                lineHeight: 1.1,
+              }}
+            >
+              {t('splash.title')}
+            </div>
+
+            {/* Quiet caption — inherits Manrope from the frame */}
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.55)',
+                letterSpacing: 0.4,
+                lineHeight: 1.4,
+                marginTop: 8,
+              }}
+            >
+              {t('splash.subtitle')}
+            </div>
+          </div>
+
+          {/* Loader */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 14,
+              paddingTop: 28,
+            }}
+          >
+            <div
+              style={{
+                width: 120,
+                height: 3,
+                borderRadius: 3,
+                background: 'rgba(255,255,255,0.10)',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: '62%',
+                  background: colors.gold,
+                  borderRadius: 3,
+                  animation: 'kt-loader 1.6s ease-in-out infinite',
+                }}
+              />
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: 'rgba(255,255,255,0.45)',
+                letterSpacing: 2.5,
+                textTransform: 'uppercase',
+              }}
+            >
+              {t('splash.version', { status: t('splash.loading') })}
+            </div>
+          </div>
         </div>
       </div>
       <style>{`

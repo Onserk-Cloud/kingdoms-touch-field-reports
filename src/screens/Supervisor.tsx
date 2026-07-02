@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AdminTabBar } from '../components/TabBar';
 import { Badge } from '../components/Badge';
+import { Priority } from '../components/Priority';
 import { BellIcon, ClockIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { HAS_SUPABASE, getSupabase } from '../lib/supabase';
@@ -11,9 +12,9 @@ import { useUnreadCount } from '../lib/notifications';
 import { useSessionStore } from '../store/session';
 import {
   listAllCases,
-  caseStatusBadge,
+  caseRef,
   caseStatusKey,
-  priorityColor,
+  dueLabel,
   type Case,
 } from '../lib/cases';
 import { formatDate, formatTime, initialsOf } from '../lib/format';
@@ -102,21 +103,28 @@ export function Supervisor() {
 
   const stats = useMemo(() => {
     const today = todayStr();
-    const open = cases.filter((c) => c.status !== 'closed');
+    const done = (c: Case) => c.status === 'approved' || c.status === 'closed';
+    const open = cases.filter((c) => !done(c));
     const byStatus = (s: Case['status']) =>
       cases.filter((c) => c.status === s).length;
     return {
       open: open.length,
       inProgress: byStatus('in_progress'),
-      inReview: byStatus('submitted'),
+      inReview: byStatus('submitted') + byStatus('in_review'),
       overdue: open.filter((c) => c.dueDate && c.dueDate < today).length,
       dueToday: open.filter((c) => c.dueDate === today).length,
       pipeline: [
         { key: 'available' as const, n: byStatus('available') },
-        { key: 'assigned' as const, n: byStatus('assigned') },
+        {
+          key: 'assigned' as const,
+          n: byStatus('assigned') + byStatus('needs_changes'),
+        },
         { key: 'in_progress' as const, n: byStatus('in_progress') },
-        { key: 'submitted' as const, n: byStatus('submitted') },
-        { key: 'closed' as const, n: byStatus('closed') },
+        {
+          key: 'in_review' as const,
+          n: byStatus('submitted') + byStatus('in_review'),
+        },
+        { key: 'done' as const, n: byStatus('approved') + byStatus('closed') },
       ],
     };
   }, [cases]);
@@ -125,12 +133,15 @@ export function Supervisor() {
     const today = todayStr();
     const rank = (c: Case): number => {
       if (c.dueDate && c.dueDate < today) return 0; // overdue
-      if (c.status === 'submitted') return 1; // to review
+      if (c.status === 'submitted' || c.status === 'in_review') return 1; // to review
       if (c.dueDate === today) return 2; // due today
       return 9;
     };
     return cases
-      .filter((c) => c.status !== 'closed' && rank(c) < 9)
+      .filter(
+        (c) =>
+          c.status !== 'closed' && c.status !== 'approved' && rank(c) < 9,
+      )
       .sort((a, b) => rank(a) - rank(b))
       .slice(0, 4);
   }, [cases]);
@@ -153,6 +164,18 @@ export function Supervisor() {
   }, [cases, team]);
 
   const attnTotal = stats.overdue + stats.dueToday + stats.inReview;
+
+  // Pipeline column accent per status (design: kt-admin-1 dashboard).
+  const pipelineAccent: Record<
+    (typeof stats.pipeline)[number]['key'],
+    string
+  > = {
+    available: colors.gold,
+    assigned: colors.goldDeep,
+    in_progress: colors.blue,
+    in_review: colors.goldDeep,
+    done: colors.forest,
+  };
 
   return (
     <PhoneFrame bg={colors.ivory}>
@@ -211,17 +234,30 @@ export function Supervisor() {
             <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.2 }}>
               {me?.name ?? 'Kingdoms Touch'}
             </div>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: 1,
-                textTransform: 'uppercase',
-                color: colors.goldSoft,
-                marginTop: 3,
-              }}
-            >
-              {t('supervisor.eyebrow')}
+            <div style={{ marginTop: 3 }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '3px 9px',
+                  borderRadius: 999,
+                  background: colors.gold,
+                  color: colors.forest,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <path
+                    d="M1 4l2.5 2L6 2l2.5 4L11 4l-1 6H2L1 4z"
+                    fill="currentColor"
+                  />
+                </svg>
+                {t('cases.roleSuperAdmin')}
+              </span>
             </div>
           </div>
           <button
@@ -273,7 +309,7 @@ export function Supervisor() {
             fontWeight: 500,
           }}
         >
-          {formatDate(Date.now())}
+          {formatDate(Date.now())} · {t('cases.hqLabel')}
         </div>
         <div
           style={{
@@ -402,7 +438,7 @@ export function Supervisor() {
             {
               n: stats.inProgress,
               label: t('cases.kpiInProgress'),
-              color: '#3A78A0',
+              color: colors.blue,
             },
             {
               n: stats.inReview,
@@ -540,8 +576,7 @@ export function Supervisor() {
                     width: 18,
                     height: 3,
                     borderRadius: 2,
-                    background:
-                      p.key === 'closed' ? colors.forest : colors.gold,
+                    background: pipelineAccent[p.key],
                     margin: '0 auto 7px',
                   }}
                 />
@@ -567,7 +602,9 @@ export function Supervisor() {
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {t(caseStatusKey(p.key))}
+                  {p.key === 'done'
+                    ? t('cases.pipelineDone')
+                    : t(caseStatusKey(p.key))}
                 </div>
               </div>
             ))}
@@ -641,6 +678,11 @@ export function Supervisor() {
         {attention.map((c) => {
           const today = todayStr();
           const overdue = !!c.dueDate && c.dueDate < today;
+          const inReview = c.status === 'submitted' || c.status === 'in_review';
+          const due =
+            inReview && !overdue
+              ? t('cases.needsReview')
+              : dueLabel(c.dueDate, c.dueTime);
           return (
             <div
               key={c.id}
@@ -669,9 +711,9 @@ export function Supervisor() {
                   borderRadius: 2,
                   background: overdue
                     ? '#B53D2E'
-                    : c.status === 'submitted'
+                    : inReview
                       ? colors.goldDeep
-                      : '#3A78A0',
+                      : colors.blue,
                   flexShrink: 0,
                 }}
               />
@@ -686,20 +728,29 @@ export function Supervisor() {
                 >
                   <span
                     style={{
-                      fontSize: 14,
+                      fontSize: 10.5,
                       fontWeight: 700,
-                      color: colors.charcoal,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      color: colors.muted,
+                      letterSpacing: 0.5,
                     }}
                   >
-                    {c.jobType}
+                    #{caseRef(c)}
                   </span>
-                  <Badge
-                    kind={caseStatusBadge(c.status)}
-                    label={t(caseStatusKey(c.status))}
-                  />
+                  <Priority level={c.priority} size="sm" />
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: colors.charcoal,
+                    letterSpacing: -0.1,
+                    marginTop: 4,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {c.jobType}
                 </div>
                 <div
                   style={{
@@ -712,30 +763,73 @@ export function Supervisor() {
                 >
                   <span
                     style={{
-                      fontSize: 11.5,
-                      color: colors.muted,
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      minWidth: 0,
                     }}
                   >
-                    {c.location || c.clientOrSite || '—'}
+                    {c.assigneeName ? (
+                      <>
+                        <span
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: c.assigneeColor ?? colors.forestSoft,
+                            color: '#fff',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 7.5,
+                            fontWeight: 700,
+                            letterSpacing: 0.3,
+                            flexShrink: 0,
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
+                          }}
+                        >
+                          {c.assigneeInitials || initialsOf(c.assigneeName)}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: colors.muted,
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {c.assigneeName.split(' ')[0]}
+                        </span>
+                      </>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: colors.muted,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {t('cases.unassigned')}
+                      </span>
+                    )}
                   </span>
-                  {c.priority !== 'medium' && (
-                    <span
-                      style={{
-                        fontSize: 10.5,
-                        fontWeight: 800,
-                        letterSpacing: 0.4,
-                        textTransform: 'uppercase',
-                        color: priorityColor(c.priority, colors),
-                        flexShrink: 0,
-                      }}
-                    >
-                      {c.priority}
-                    </span>
-                  )}
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: 0.1,
+                      color: overdue
+                        ? '#B53D2E'
+                        : inReview
+                          ? colors.goldDeep
+                          : colors.forestSoft,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {due}
+                  </span>
                 </div>
               </div>
             </div>

@@ -5,7 +5,41 @@ import type { Employee } from './types';
 const AVATAR_BUCKET = 'avatars';
 
 const PROFILE_COLS =
-  'id, name, role, active, initials, avatar_color, created_at, phone, email, skills, avatar_url';
+  'id, name, role, active, initials, avatar_color, created_at, phone, email, skills, avatar_url, notification_prefs, crew';
+
+/** Per-user notification toggles (mirrors employees.notification_prefs jsonb). */
+export interface NotificationPrefs {
+  assignments: boolean;
+  deadlines: boolean;
+  caseUpdates: boolean;
+  weeklySummary: boolean;
+}
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  assignments: true,
+  deadlines: true,
+  caseUpdates: true,
+  weeklySummary: false,
+};
+
+/** Normalize the raw jsonb (possibly {} or partial) into a full prefs object. */
+function toNotificationPrefs(raw: unknown): NotificationPrefs {
+  const src = (raw ?? {}) as Partial<Record<keyof NotificationPrefs, unknown>>;
+  const pick = (k: keyof NotificationPrefs): boolean =>
+    typeof src[k] === 'boolean' ? (src[k] as boolean) : DEFAULT_NOTIFICATION_PREFS[k];
+  return {
+    assignments: pick('assignments'),
+    deadlines: pick('deadlines'),
+    caseUpdates: pick('caseUpdates'),
+    weeklySummary: pick('weeklySummary'),
+  };
+}
+
+/** Employee row plus the profile-only columns (notification_prefs, crew). */
+export interface MyProfile extends Employee {
+  notification_prefs: NotificationPrefs;
+  crew: string | null;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToEmployee(r: any): Employee {
@@ -24,8 +58,17 @@ function rowToEmployee(r: any): Employee {
   };
 }
 
-/** Fetch the full profile row (including phone/email/skills/avatar) for an employee. */
-export async function getMyProfile(employeeId: string): Promise<Employee | null> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToProfile(r: any): MyProfile {
+  return {
+    ...rowToEmployee(r),
+    notification_prefs: toNotificationPrefs(r.notification_prefs),
+    crew: r.crew ?? null,
+  };
+}
+
+/** Fetch the full profile row (including phone/email/skills/avatar/prefs/crew). */
+export async function getMyProfile(employeeId: string): Promise<MyProfile | null> {
   if (!HAS_SUPABASE) return null;
   try {
     const sb = getSupabase();
@@ -35,7 +78,7 @@ export async function getMyProfile(employeeId: string): Promise<Employee | null>
       .eq('id', employeeId)
       .single();
     if (error) throw error;
-    return data ? rowToEmployee(data) : null;
+    return data ? rowToProfile(data) : null;
   } catch (err) {
     console.error('[KT] getMyProfile failed', err);
     return null;
@@ -48,24 +91,39 @@ export interface ProfilePatch {
   email: string | null;
   skills: string[];
   avatarUrl: string | null;
+  notificationPrefs: NotificationPrefs;
+  crew: string | null;
 }
 
 /** Update the caller's own profile via the SECURITY DEFINER RPC. */
-export async function updateMyProfile(patch: ProfilePatch): Promise<Employee | null> {
+export async function updateMyProfile(patch: ProfilePatch): Promise<MyProfile | null> {
   if (!HAS_SUPABASE) return null;
   try {
     const sb = getSupabase();
-    const { data, error } = await sb.rpc('update_my_profile', {
+    let { data, error } = await sb.rpc('update_my_profile', {
       p_name: patch.name,
       p_phone: patch.phone,
       p_email: patch.email,
       p_skills: patch.skills,
       p_avatar_url: patch.avatarUrl,
+      p_notification_prefs: patch.notificationPrefs,
+      p_crew: patch.crew,
     });
+    if (error && error.code === 'PGRST202') {
+      // Migration 0016 not applied yet — retry the legacy 5-arg RPC so the
+      // rest of the profile still saves (prefs/crew are skipped until then).
+      ({ data, error } = await sb.rpc('update_my_profile', {
+        p_name: patch.name,
+        p_phone: patch.phone,
+        p_email: patch.email,
+        p_skills: patch.skills,
+        p_avatar_url: patch.avatarUrl,
+      }));
+    }
     if (error) throw error;
     // The function returns a single employees row.
     const row = Array.isArray(data) ? data[0] : data;
-    return row ? rowToEmployee(row) : null;
+    return row ? rowToProfile(row) : null;
   } catch (err) {
     console.error('[KT] updateMyProfile failed', err);
     return null;

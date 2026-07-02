@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
@@ -9,9 +9,10 @@ import {
   listNotifications,
   markAllRead,
   markRead,
+  snoozeNotification,
   type KtNotification,
 } from '../lib/notifications';
-import { formatDateTime } from '../lib/format';
+import { formatDate } from '../lib/format';
 import {
   isPushSupported,
   getPushPermission,
@@ -36,13 +37,35 @@ function bodyKey(type: string): string {
   return 'notifications.newReportBody';
 }
 
-function tint(type: string): string {
-  if (type === 'reviewed') return '#1F3D2B';
-  if (type === 'needs_update' || type === 'case_needs_changes') return '#A04A2E';
-  return '#C4984C';
+const NOTE_TYPES = ['needs_update', 'case_needs_changes'];
+
+/** Visual family of a notification — drives the icon tile + card accents. */
+type Kind = 'overdue' | 'soon' | 'review' | 'done' | 'assigned';
+
+function kindOf(type: string): Kind {
+  if (type === 'case_overdue') return 'overdue';
+  if (type === 'case_due_soon') return 'soon';
+  // "Changes requested" shares the danger/triangle treatment: it needs action.
+  if (NOTE_TYPES.includes(type)) return 'overdue';
+  if (type === 'reviewed') return 'done';
+  if (type === 'case_assigned') return 'assigned';
+  return 'review'; // new_report + unknown types
 }
 
-const NOTE_TYPES = ['needs_update', 'case_needs_changes'];
+/** Types that belong under the "Deadlines" section header. */
+const DEADLINE_TYPES = ['case_due_soon', 'case_overdue'];
+
+/** Compact relative age: now / 12m / 3h / 2d, then a short date. */
+function timeAgo(ts: number, nowLabel: string): string {
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return nowLabel;
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d`;
+  return formatDate(ts);
+}
 
 export function Notifications() {
   const { colors } = useTheme();
@@ -123,13 +146,271 @@ export function Notifications() {
     setItems((prev) => prev.map((x) => ({ ...x, read: true })));
   }
 
+  async function snooze(n: KtNotification) {
+    await snoozeNotification(n.id);
+    setItems((prev) => prev.filter((x) => x.id !== n.id));
+  }
+
   const hasUnread = items.some((n) => !n.read);
+
+  /** kind → tinted icon tile (40×40, radius 11) with an 18px inline icon. */
+  const kindMeta: Record<
+    Kind,
+    { c: string; bg: string; icon: (c: string) => ReactNode }
+  > = {
+    overdue: {
+      c: colors.danger,
+      bg: colors.dangerSoft,
+      icon: (c) => (
+        <>
+          <path
+            d="M9 2l7 13H2L9 2z"
+            stroke={c}
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M9 7v4M9 13h.01"
+            stroke={c}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </>
+      ),
+    },
+    soon: {
+      c: colors.goldDeep,
+      bg: `${colors.gold}24`,
+      icon: (c) => (
+        <>
+          <circle cx="9" cy="9" r="7" stroke={c} strokeWidth="1.6" />
+          <path
+            d="M9 5v4l3 2"
+            stroke={c}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </>
+      ),
+    },
+    review: {
+      c: colors.goldDeep,
+      bg: `${colors.gold}24`,
+      icon: (c) => (
+        <>
+          <path
+            d="M2 9s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"
+            stroke={c}
+            strokeWidth="1.5"
+          />
+          <circle cx="9" cy="9" r="2" stroke={c} strokeWidth="1.5" />
+        </>
+      ),
+    },
+    done: {
+      c: colors.forest,
+      bg: `${colors.sage}2E`,
+      icon: (c) => (
+        <path
+          d="M3 9.5l3.5 3.5L15 5"
+          stroke={c}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ),
+    },
+    assigned: {
+      c: colors.blue,
+      bg: colors.blueSoft,
+      icon: (c) => (
+        <>
+          <circle cx="9" cy="6.5" r="2.6" stroke={c} strokeWidth="1.5" />
+          <path
+            d="M4 14c.8-2.3 2.6-3.5 5-3.5s4.2 1.2 5 3.5"
+            stroke={c}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </>
+      ),
+    },
+  };
+
+  const groups = [
+    {
+      key: 'deadlines',
+      labelKey: 'notifications.groupDeadlines',
+      items: items.filter((n) => DEADLINE_TYPES.includes(n.type)),
+    },
+    {
+      key: 'updates',
+      labelKey: 'notifications.groupUpdates',
+      items: items.filter((n) => !DEADLINE_TYPES.includes(n.type)),
+    },
+  ];
+
+  const alertCount = items.filter((n) => {
+    const k = kindOf(n.type);
+    return !n.read && (k === 'overdue' || k === 'soon');
+  }).length;
+
+  function renderItem(n: KtNotification) {
+    const kind = kindOf(n.type);
+    const m = kindMeta[kind];
+    const alert = kind === 'overdue' || kind === 'soon';
+    return (
+      <div
+        key={n.id}
+        onClick={() => void open(n)}
+        role="button"
+        tabIndex={0}
+        aria-label={t(titleKey(n.type))}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            void open(n);
+          }
+        }}
+        className="kt-tap"
+        style={{
+          display: 'flex',
+          gap: 12,
+          alignItems: 'flex-start',
+          background: n.read ? '#fff' : 'rgba(196,152,76,0.07)',
+          border: `1px solid ${
+            kind === 'overdue'
+              ? colors.dangerLine
+              : n.read
+                ? colors.line
+                : 'rgba(196,152,76,0.35)'
+          }`,
+          borderRadius: 16,
+          padding: 13,
+          marginBottom: 9,
+          cursor: 'pointer',
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 11,
+            background: m.bg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            opacity: n.read ? 0.55 : 1,
+          }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            aria-hidden="true"
+          >
+            {m.icon(m.c)}
+          </svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}
+          >
+            <span
+              style={{
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: colors.charcoal,
+                letterSpacing: -0.1,
+                lineHeight: 1.3,
+              }}
+            >
+              {t(titleKey(n.type))}
+            </span>
+            <span
+              style={{
+                fontSize: 10.5,
+                color: colors.muted,
+                fontWeight: 600,
+                flexShrink: 0,
+              }}
+            >
+              {timeAgo(n.createdAt, t('notifications.timeNow'))}
+            </span>
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              color: colors.muted,
+              marginTop: 3,
+              fontWeight: 500,
+              lineHeight: 1.35,
+            }}
+          >
+            {n.refLabel ? `${n.refLabel} — ` : ''}
+            {NOTE_TYPES.includes(n.type) && n.note
+              ? n.note
+              : t(bodyKey(n.type))}
+          </div>
+          {alert && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void open(n);
+                }}
+                className="kt-tap"
+                style={{
+                  padding: '7px 12px',
+                  borderRadius: 9,
+                  border: 'none',
+                  background: kind === 'overdue' ? colors.danger : colors.forest,
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {t('notifications.openCase')}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void snooze(n);
+                }}
+                className="kt-tap"
+                style={{
+                  padding: '7px 12px',
+                  borderRadius: 9,
+                  background: colors.ivory,
+                  color: colors.forest,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  border: `1px solid ${colors.line}`,
+                  cursor: 'pointer',
+                }}
+              >
+                {t('notifications.snooze')}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <PhoneFrame bg={colors.ivory}>
       <AppBar
         title={t('notifications.title')}
-        eyebrow={t('notifications.eyebrow')}
+        eyebrow={
+          alertCount > 0
+            ? t('notifications.needAction', { n: alertCount })
+            : t('notifications.eyebrow')
+        }
         onBack={() => navigate(-1)}
         trailing={
           hasUnread ? (
@@ -319,82 +600,29 @@ export function Notifications() {
             {t('notifications.empty')}
           </div>
         )}
-        {items.map((n) => (
-          <div
-            key={n.id}
-            onClick={() => void open(n)}
-            role="button"
-            tabIndex={0}
-            aria-label={t(titleKey(n.type))}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                void open(n);
-              }
-            }}
-            className="kt-tap"
-            style={{
-              display: 'flex',
-              gap: 12,
-              alignItems: 'flex-start',
-              background: n.read ? '#fff' : 'rgba(196,152,76,0.07)',
-              border: `1px solid ${n.read ? colors.line : 'rgba(196,152,76,0.35)'}`,
-              borderRadius: 14,
-              padding: '13px 14px',
-              marginBottom: 10,
-              cursor: 'pointer',
-            }}
-          >
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: 999,
-                background: tint(n.type),
-                marginTop: 5,
-                flexShrink: 0,
-                opacity: n.read ? 0.3 : 1,
-              }}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: colors.charcoal,
-                  letterSpacing: -0.1,
-                }}
-              >
-                {t(titleKey(n.type))}
-              </div>
-              <div
-                style={{
-                  fontSize: 12.5,
-                  color: colors.muted,
-                  marginTop: 2,
-                  fontWeight: 500,
-                  lineHeight: 1.35,
-                }}
-              >
-                {n.refLabel ? `${n.refLabel} — ` : ''}
-                {NOTE_TYPES.includes(n.type) && n.note
-                  ? n.note
-                  : t(bodyKey(n.type))}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: colors.muted,
-                  marginTop: 6,
-                  fontWeight: 600,
-                  opacity: 0.8,
-                }}
-              >
-                {formatDateTime(new Date(n.createdAt).toISOString())}
-              </div>
-            </div>
-          </div>
-        ))}
+        {!loading &&
+          !error &&
+          groups.map(
+            (g) =>
+              g.items.length > 0 && (
+                <div key={g.key} style={{ marginBottom: 18 }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: colors.goldDeep,
+                      letterSpacing: 1.4,
+                      textTransform: 'uppercase',
+                      marginBottom: 10,
+                      paddingLeft: 2,
+                    }}
+                  >
+                    {t(g.labelKey)}
+                  </div>
+                  {g.items.map(renderItem)}
+                </div>
+              ),
+          )}
       </div>
     </PhoneFrame>
   );

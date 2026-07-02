@@ -32,3 +32,19 @@ alter table public.employees
 
 alter table public.employees
   add column if not exists crew text;
+
+-- ── RLS: treat 'approved' like 'closed' ──
+-- Only the case creator or super_admin can finalize a case (the client's
+-- approved process: the assigning staff member closes/approves their cases).
+drop policy if exists "cases: staff manage" on public.cases;
+create policy "cases: staff manage"
+  on public.cases for update
+  using (public.kt_is_staff())
+  with check (
+    public.kt_is_staff()
+    and (
+      status not in ('closed', 'approved')
+      or created_by = (select id from public.employees where auth_user_id = auth.uid())
+      or public.kt_is_super_admin()
+    )
+  );

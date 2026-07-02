@@ -4,16 +4,33 @@ import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
 import { TabBar } from '../components/TabBar';
 import { Badge, type BadgeKind } from '../components/Badge';
+import { Priority } from '../components/Priority';
 import { ClockIcon, PhotoIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { useSessionStore } from '../store/session';
 import { ktStore } from '../lib/offline-store';
 import { HAS_SUPABASE } from '../lib/supabase';
 import { relativeDate } from '../lib/format';
+import { priorityColor } from '../lib/cases';
 import { useI18n } from '../lib/i18n';
 import type { OfflineReport } from '../lib/types';
 
-type ChipKey = 'all' | 'week' | 'pending' | 'reviewed';
+type ChipKey = 'all' | 'todo' | 'inProgress' | 'inReview' | 'done';
+
+/**
+ * Lifecycle chip → the local report statuses that sit in that stage of the
+ * ticket. Mirrors the case lifecycle grouping: pending/syncing/error are
+ * work in flight (awaiting sync) and needs_update is active rework.
+ */
+const STATUS_GROUPS: Record<
+  Exclude<ChipKey, 'all'>,
+  OfflineReport['status'][]
+> = {
+  todo: ['draft'],
+  inProgress: ['pending', 'syncing', 'error', 'needs_update'],
+  inReview: ['submitted'],
+  done: ['reviewed'],
+};
 
 export function MyReports() {
   const { colors } = useTheme();
@@ -58,11 +75,10 @@ export function MyReports() {
   }, [employee, reloadKey]);
 
   const filtered = useMemo(() => {
-    const week = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const list = reports.filter((r) => {
-      if (chip === 'week' && r.createdAt < week) return false;
-      if (chip === 'pending' && r.status !== 'pending') return false;
-      if (chip === 'reviewed' && r.status !== 'reviewed') return false;
+      if (chip !== 'all' && !STATUS_GROUPS[chip].includes(r.status)) {
+        return false;
+      }
       if (search) {
         const s = search.toLowerCase();
         return (
@@ -77,8 +93,12 @@ export function MyReports() {
     );
   }, [reports, chip, search, sortAsc]);
 
-  const submitted = reports.filter((r) => r.status === 'submitted').length;
-  const pending = reports.filter((r) => r.status === 'pending').length;
+  // Eyebrow: "open" = anything the ticket lifecycle hasn't handed off yet
+  // (to do + in progress groups); "review" = submitted, awaiting review.
+  const open = reports.filter(
+    (r) => r.status !== 'submitted' && r.status !== 'reviewed',
+  ).length;
+  const review = reports.filter((r) => r.status === 'submitted').length;
 
   const badgeFor = (s: OfflineReport['status']): BadgeKind => {
     switch (s) {
@@ -101,9 +121,11 @@ export function MyReports() {
     }
   };
 
-  // Keep the left accent bar in sync with the badge colour.
-  const barColorFor = (s: OfflineReport['status']): string => {
-    switch (badgeFor(s)) {
+  // Keep the left accent bar in sync with the badge colour; an urgent
+  // priority overrides with the red priority accent (matches the design).
+  const barColorFor = (r: OfflineReport): string => {
+    if (r.priority === 'urgent') return priorityColor('urgent', colors);
+    switch (badgeFor(r.status)) {
       case 'submitted':
       case 'reviewed':
         return colors.forest;
@@ -136,7 +158,7 @@ export function MyReports() {
     <PhoneFrame bg={colors.ivory}>
       <AppBar
         title={t('myReports.title')}
-        eyebrow={t('myReports.eyebrow', { submitted, pending })}
+        eyebrow={t('myReports.eyebrow', { open, review })}
         back={false}
         trailing={
           <button
@@ -230,9 +252,10 @@ export function MyReports() {
             k: 'all' as const,
             label: t('myReports.chipAll', { n: reports.length }),
           },
-          { k: 'week' as const, label: t('myReports.chipWeek') },
-          { k: 'pending' as const, label: t('myReports.chipPending') },
-          { k: 'reviewed' as const, label: t('myReports.chipReviewed') },
+          { k: 'todo' as const, label: t('myReports.chipTodo') },
+          { k: 'inProgress' as const, label: t('myReports.chipInProgress') },
+          { k: 'inReview' as const, label: t('myReports.chipInReview') },
+          { k: 'done' as const, label: t('myReports.chipDone') },
         ].map((c) => {
           const active = chip === c.k;
           return (
@@ -382,7 +405,7 @@ export function MyReports() {
                   width: 3,
                   borderRadius: 2,
                   flexShrink: 0,
-                  background: barColorFor(r.status),
+                  background: barColorFor(r),
                 }}
               />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -407,7 +430,7 @@ export function MyReports() {
                   >
                     {r.jobType || t('myReports.untitled')}
                   </div>
-                  <Badge kind={badgeFor(r.status)} />
+                  {r.priority && <Priority level={r.priority} size="sm" />}
                 </div>
                 <div
                   style={{
@@ -426,36 +449,43 @@ export function MyReports() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12,
-                    marginTop: 8,
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginTop: 9,
                   }}
                 >
                   <span
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 4,
+                      gap: 5,
                       fontSize: 11,
                       color: colors.muted,
                       fontWeight: 600,
+                      minWidth: 0,
                     }}
                   >
                     <ClockIcon color={colors.muted} />
                     {relativeDate(r.createdAt)}
+                    {(photoCounts[r.id] ?? 0) > 0 && (
+                      <span
+                        aria-label={t('myReports.photoCount', {
+                          n: photoCounts[r.id] ?? 0,
+                        })}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          marginLeft: 6,
+                          opacity: 0.7,
+                        }}
+                      >
+                        <PhotoIcon color={colors.muted} />
+                        {photoCounts[r.id] ?? 0}
+                      </span>
+                    )}
                   </span>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      fontSize: 11,
-                      color: colors.muted,
-                      fontWeight: 600,
-                    }}
-                  >
-                    <PhotoIcon color={colors.muted} />
-                    {t('myReports.photoCount', { n: photoCounts[r.id] ?? 0 })}
-                  </span>
+                  <Badge kind={badgeFor(r.status)} />
                 </div>
               </div>
             </div>

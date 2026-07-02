@@ -36,196 +36,204 @@ export function Success() {
 
   return (
     <PhoneFrame bg={colors.ivory}>
+      {/* Scroll container: fills the frame and scrolls when the viewport is
+          short (landscape phone). The inner flex column stretches to at least
+          the full height, so on tall screens the layout is unchanged (content
+          on top, CTAs pinned to the bottom by the spacer). */}
       <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          padding: '70px 24px 40px',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-        className="kt-safe-top kt-safe-bottom"
+        className="kt-scroll"
+        style={{ position: 'absolute', inset: 0, overflowY: 'auto' }}
       >
         <div
-          style={{ display: 'flex', justifyContent: 'center', marginTop: 28 }}
+          style={{
+            minHeight: '100%',
+            padding: '70px 24px 40px',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          className="kt-safe-top kt-safe-bottom"
         >
           <div
-            style={{
-              width: 132,
-              height: 132,
-              borderRadius: '50%',
-              background:
-                'radial-gradient(circle, rgba(196,152,76,0.18) 0%, transparent 70%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
+            style={{ display: 'flex', justifyContent: 'center', marginTop: 28 }}
           >
             <div
               style={{
-                position: 'absolute',
-                inset: 16,
+                width: 132,
+                height: 132,
                 borderRadius: '50%',
-                border: `1px dashed ${colors.gold}`,
-                opacity: 0.6,
-              }}
-            />
-            <div
-              style={{
-                width: 90,
-                height: 90,
-                borderRadius: '50%',
-                background: `linear-gradient(135deg, ${colors.gold} 0%, ${colors.goldDeep} 100%)`,
+                background:
+                  'radial-gradient(circle, rgba(196,152,76,0.18) 0%, transparent 70%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow:
-                  '0 12px 28px rgba(196,152,76,0.35), inset 0 2px 0 rgba(255,255,255,0.4)',
-                animation: 'kt-pop 0.6s ease-out',
+                position: 'relative',
               }}
             >
-              <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
-                <path
-                  d="M9 22l8 8 16-18"
-                  stroke="#fff"
-                  strokeWidth="4.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 16,
+                  borderRadius: '50%',
+                  border: `1px dashed ${colors.gold}`,
+                  opacity: 0.6,
+                }}
+              />
+              <div
+                style={{
+                  width: 90,
+                  height: 90,
+                  borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${colors.gold} 0%, ${colors.goldDeep} 100%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow:
+                    '0 12px 28px rgba(196,152,76,0.35), inset 0 2px 0 rgba(255,255,255,0.4)',
+                  animation: 'kt-pop 0.6s ease-out',
+                }}
+              >
+                <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+                  <path
+                    d="M9 22l8 8 16-18"
+                    stroke="#fff"
+                    strokeWidth="4.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: colors.goldDeep,
-              letterSpacing: 2,
-              textTransform: 'uppercase',
-            }}
-          >
-            {t('success.eyebrow', {
-              id: shortReportId(report?.remoteId ?? id),
-            })}
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: colors.goldDeep,
+                letterSpacing: 2,
+                textTransform: 'uppercase',
+              }}
+            >
+              {t('success.eyebrow', {
+                id: shortReportId(report?.remoteId ?? id),
+              })}
+            </div>
+            <div
+              style={{
+                fontFamily: 'Fraunces, Georgia, serif',
+                fontSize: 30,
+                fontWeight: 500,
+                color: colors.charcoal,
+                letterSpacing: -0.5,
+                lineHeight: 1.15,
+                marginTop: 8,
+              }}
+            >
+              {t('success.titleLine1')}
+              <br />
+              {t('success.titleLine2')}
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                color: colors.muted,
+                marginTop: 10,
+                fontWeight: 500,
+                lineHeight: 1.4,
+              }}
+            >
+              {t('success.subtitleLine1')}
+              <br />
+              {t('success.subtitleLine2')}
+            </div>
           </div>
-          <div
-            style={{
-              fontFamily: 'Fraunces, Georgia, serif',
-              fontSize: 30,
-              fontWeight: 500,
-              color: colors.charcoal,
-              letterSpacing: -0.5,
-              lineHeight: 1.15,
-              marginTop: 8,
-            }}
-          >
-            {t('success.titleLine1')}
-            <br />
-            {t('success.titleLine2')}
-          </div>
-          <div
-            style={{
-              fontSize: 14,
-              color: colors.muted,
-              marginTop: 10,
-              fontWeight: 500,
-              lineHeight: 1.4,
-            }}
-          >
-            {t('success.subtitleLine1')}
-            <br />
-            {t('success.subtitleLine2')}
-          </div>
-        </div>
 
-        <div
-          style={{
-            marginTop: 22,
-            background: '#fff',
-            borderRadius: 18,
-            padding: 16,
-            border: `1px solid ${colors.line}`,
-          }}
-        >
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              marginTop: 22,
+              background: '#fff',
+              borderRadius: 18,
+              padding: 16,
+              border: `1px solid ${colors.line}`,
             }}
           >
             <div
               style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: colors.charcoal,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}
             >
-              {report?.jobType ?? t('success.fieldReport')}
-            </div>
-            <Badge
-              kind={report?.status === 'submitted' ? 'submitted' : 'pending'}
-            />
-          </div>
-          <div
-            style={{
-              height: 1,
-              background: colors.line,
-              margin: '12px 0',
-            }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            {[
-              { label: t('common.photos'), value: String(photoCount) },
-              {
-                label: t('success.gps'),
-                value: report?.gps ? t('success.gpsCaptured') : '—',
-              },
-              {
-                label: t('success.time'),
-                value: report ? formatTime(report.createdAt) : '—',
-              },
-            ].map((s) => (
-              <div key={s.label}>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: colors.muted,
-                    letterSpacing: 0.8,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {s.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: colors.forest,
-                    marginTop: 3,
-                  }}
-                >
-                  {s.value}
-                </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: colors.charcoal,
+                }}
+              >
+                {report?.jobType ?? t('success.fieldReport')}
               </div>
-            ))}
+              <Badge
+                kind={report?.status === 'submitted' ? 'submitted' : 'pending'}
+              />
+            </div>
+            <div
+              style={{
+                height: 1,
+                background: colors.line,
+                margin: '12px 0',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              {[
+                { label: t('common.photos'), value: String(photoCount) },
+                {
+                  label: t('success.gps'),
+                  value: report?.gps ? t('success.gpsCaptured') : '—',
+                },
+                {
+                  label: t('success.time'),
+                  value: report ? formatTime(report.createdAt) : '—',
+                },
+              ].map((s) => (
+                <div key={s.label}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: colors.muted,
+                      letterSpacing: 0.8,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {s.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: colors.forest,
+                      marginTop: 3,
+                    }}
+                  >
+                    {s.value}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          <div style={{ flex: 1 }} />
+
+          <PrimaryButton onClick={() => navigate('/new-report')}>
+            {t('success.createAnother')}
+          </PrimaryButton>
+          <div style={{ height: 10 }} />
+          <SecondaryButton onClick={() => navigate('/home')}>
+            {t('success.backToHome')}
+          </SecondaryButton>
         </div>
-
-        <div style={{ flex: 1 }} />
-
-        <PrimaryButton onClick={() => navigate('/new-report')}>
-          {t('success.createAnother')}
-        </PrimaryButton>
-        <div style={{ height: 10 }} />
-        <SecondaryButton onClick={() => navigate('/home')}>
-          {t('success.backToHome')}
-        </SecondaryButton>
       </div>
       <style>{`
         @keyframes kt-pop {

@@ -12,6 +12,8 @@ import {
   updateMyProfile,
   uploadAvatar,
   getProfileStats,
+  DEFAULT_NOTIFICATION_PREFS,
+  type NotificationPrefs,
   type ProfileStats,
 } from '../lib/profile';
 
@@ -25,6 +27,16 @@ function roleKey(role?: string): string {
         : 'common.roleEmployee';
 }
 
+/** Skills the user typed as certifications get the gold cert-check chip. */
+const CERT_RE =
+  /\b(certified|certification|cert|certificado|certificaci[oó]n|licencia|licensed?|license|osha)\b/i;
+
+function isCertSkill(s: string): boolean {
+  return CERT_RE.test(s);
+}
+
+const BIO_STORAGE_KEY = 'kt:biometric';
+
 export function EditProfile() {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -35,6 +47,10 @@ export function EditProfile() {
   const [name, setName] = useState(employee?.name ?? '');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [crew, setCrew] = useState('');
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(
+    DEFAULT_NOTIFICATION_PREFS,
+  );
   const [skills, setSkills] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     employee?.avatar_url ?? null,
@@ -53,6 +69,35 @@ export function EditProfile() {
   const [savedFlash, setSavedFlash] = useState<null | 'ok' | 'err'>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  // Security card (stubs): biometric toggle gated on WebAuthn availability.
+  const biometricSupported =
+    typeof window !== 'undefined' && !!window.PublicKeyCredential;
+  const [bioOn, setBioOn] = useState(() => {
+    try {
+      return window.localStorage.getItem(BIO_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [securityNote, setSecurityNote] = useState(false);
+  const stubTimer = useRef<number | null>(null);
+
+  function showSecurityStub() {
+    setSecurityNote(true);
+    if (stubTimer.current) window.clearTimeout(stubTimer.current);
+    stubTimer.current = window.setTimeout(() => setSecurityNote(false), 2600);
+  }
+
+  function toggleBiometric() {
+    const next = !bioOn;
+    setBioOn(next);
+    try {
+      window.localStorage.setItem(BIO_STORAGE_KEY, next ? '1' : '0');
+    } catch {
+      /* storage unavailable — keep in-memory only */
+    }
+  }
+
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -69,6 +114,8 @@ export function EditProfile() {
       setName(profile.name);
       setPhone(profile.phone ?? '');
       setEmail(profile.email ?? '');
+      setCrew(profile.crew ?? '');
+      setNotifPrefs(profile.notification_prefs);
       setSkills(profile.skills ?? []);
       setAvatarUrl(profile.avatar_url ?? null);
     }
@@ -117,6 +164,8 @@ export function EditProfile() {
         email: email.trim() || null,
         skills,
         avatarUrl,
+        notificationPrefs: notifPrefs,
+        crew: crew.trim() || null,
       });
       if (updated) {
         setEmployee(updated);
@@ -194,6 +243,101 @@ export function EditProfile() {
         {lbl}
       </div>
     </div>
+  );
+
+  const pillToggle = (
+    on: boolean,
+    onFlip: () => void,
+    ariaLabel: string,
+    disabled = false,
+  ) => (
+    <button
+      role="switch"
+      aria-checked={on}
+      aria-label={ariaLabel}
+      onClick={onFlip}
+      disabled={disabled}
+      className="kt-tap"
+      style={{
+        width: 46,
+        height: 27,
+        borderRadius: 999,
+        border: 'none',
+        padding: 0,
+        background: on ? colors.forest : colors.ivoryDeep,
+        position: 'relative',
+        flexShrink: 0,
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.45 : 1,
+        transition: 'background 0.18s ease',
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: 3,
+          left: on ? 22 : 3,
+          width: 21,
+          height: 21,
+          borderRadius: '50%',
+          background: '#fff',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+          transition: 'left 0.18s ease',
+        }}
+      />
+    </button>
+  );
+
+  const secIcon = (kind: 'lock' | 'face' | 'phone') => (
+    <span
+      style={{
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        background: colors.ivory,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: colors.forest,
+        flexShrink: 0,
+      }}
+    >
+      {kind === 'lock' && (
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+          <rect x="3.5" y="7" width="10" height="7" rx="2" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M5.5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      )}
+      {kind === 'face' && (
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="13" height="13" rx="4" stroke="currentColor" strokeWidth="1.4" />
+          <path
+            d="M6 6.5v1M11 6.5v1M6 11c.8.8 1.9 1.2 2.5 1.2S10.2 11.8 11 11"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      )}
+      {kind === 'phone' && (
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+          <rect x="4.5" y="2" width="8" height="13" rx="2" stroke="currentColor" strokeWidth="1.4" />
+          <path d="M7.5 12.5h2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      )}
+    </span>
+  );
+
+  const chevron = (
+    <svg width="8" height="12" viewBox="0 0 8 12" fill="none" aria-hidden="true">
+      <path
+        d="M1 1l6 5-6 5"
+        stroke={colors.muted}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 
   return (
@@ -325,17 +469,27 @@ export function EditProfile() {
             >
               {name || employee?.name}
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: colors.goldDeep,
-                letterSpacing: 1.2,
-                textTransform: 'uppercase',
-                marginTop: 4,
-              }}
-            >
-              {t(roleKey(employee?.role))}
+            <div style={{ marginTop: 8 }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '3px 10px',
+                  borderRadius: 999,
+                  background: `${colors.gold}29`,
+                  color: colors.goldDeep,
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M1 4l2.5 2L6 2l2.5 4L11 4l-1 6H2L1 4z" fill="currentColor" />
+                </svg>
+                {t(roleKey(employee?.role))}
+              </span>
             </div>
           </div>
 
@@ -365,14 +519,26 @@ export function EditProfile() {
                   alignItems: 'center',
                   gap: 6,
                   background: '#fff',
-                  border: `1px solid ${colors.line}`,
+                  border: `1px solid ${isCertSkill(s) ? colors.gold : colors.line}`,
                   borderRadius: 999,
                   padding: '7px 10px 7px 12px',
                   fontSize: 12.5,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   color: colors.charcoal,
                 }}
               >
+                {isCertSkill(s) && (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <circle cx="6" cy="6" r="5.2" fill={colors.gold} />
+                    <path
+                      d="M3.6 6.2l1.6 1.6L8.4 4.4"
+                      stroke="#fff"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
                 {s}
                 <button
                   onClick={() => removeSkill(s)}
@@ -505,7 +671,7 @@ export function EditProfile() {
               aria-label={t('profile.phone')}
             />
           </div>
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 12 }}>
             <div
               style={{
                 fontSize: 10,
@@ -528,6 +694,231 @@ export function EditProfile() {
               aria-label={t('profile.email')}
             />
           </div>
+          <div style={{ marginBottom: 22 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: colors.muted,
+                letterSpacing: 0.8,
+                textTransform: 'uppercase',
+                marginBottom: 5,
+              }}
+            >
+              {t('profile.crewLabel')}
+            </div>
+            <input
+              value={crew}
+              onChange={(e) => setCrew(e.target.value)}
+              placeholder={t('profile.crewPlaceholder')}
+              className="kt-input"
+              style={inputStyle}
+              aria-label={t('profile.crewLabel')}
+            />
+          </div>
+
+          {/* Notification preferences */}
+          {label(t('profile.notifTitle'))}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 14,
+              border: `1px solid ${colors.line}`,
+              overflow: 'hidden',
+              marginBottom: 22,
+            }}
+          >
+            {(
+              [
+                ['assignments', t('profile.notifAssignments')],
+                ['deadlines', t('profile.notifDeadlines')],
+                ['caseUpdates', t('profile.notifCaseUpdates')],
+                ['weeklySummary', t('profile.notifWeekly')],
+              ] as [keyof NotificationPrefs, string][]
+            ).map(([k, lbl], i, arr) => (
+              <div
+                key={k}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '13px 14px',
+                  borderBottom:
+                    i < arr.length - 1 ? `1px solid ${colors.line}` : 'none',
+                }}
+              >
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    color: colors.charcoal,
+                  }}
+                >
+                  {lbl}
+                </span>
+                {pillToggle(
+                  notifPrefs[k],
+                  () => setNotifPrefs({ ...notifPrefs, [k]: !notifPrefs[k] }),
+                  lbl,
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Security */}
+          {label(t('profile.securityTitle'))}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 14,
+              border: `1px solid ${colors.line}`,
+              overflow: 'hidden',
+              marginBottom: 12,
+            }}
+          >
+            <button
+              onClick={showSecurityStub}
+              className="kt-tap"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 14px',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: `1px solid ${colors.line}`,
+                cursor: 'pointer',
+                fontFamily: 'Manrope',
+                textAlign: 'left',
+              }}
+            >
+              {secIcon('lock')}
+              <span style={{ flex: 1 }}>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    color: colors.charcoal,
+                  }}
+                >
+                  {t('profile.changePin')}
+                </span>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: colors.muted,
+                    marginTop: 1,
+                  }}
+                >
+                  {t('profile.changePinMeta')}
+                </span>
+              </span>
+              {chevron}
+            </button>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 14px',
+                borderBottom: `1px solid ${colors.line}`,
+              }}
+            >
+              {secIcon('face')}
+              <span style={{ flex: 1 }}>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    color: colors.charcoal,
+                  }}
+                >
+                  {t('profile.faceId')}
+                </span>
+                {!biometricSupported && (
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: 11,
+                      fontWeight: 500,
+                      color: colors.muted,
+                      marginTop: 1,
+                    }}
+                  >
+                    {t('profile.faceIdUnavailable')}
+                  </span>
+                )}
+              </span>
+              {pillToggle(
+                biometricSupported && bioOn,
+                toggleBiometric,
+                t('profile.faceId'),
+                !biometricSupported,
+              )}
+            </div>
+            <button
+              onClick={showSecurityStub}
+              className="kt-tap"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 14px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'Manrope',
+                textAlign: 'left',
+              }}
+            >
+              {secIcon('phone')}
+              <span style={{ flex: 1 }}>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    color: colors.charcoal,
+                  }}
+                >
+                  {t('profile.linkedDevices')}
+                </span>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: colors.muted,
+                    marginTop: 1,
+                  }}
+                >
+                  {t('profile.linkedDevicesMeta')}
+                </span>
+              </span>
+              {chevron}
+            </button>
+          </div>
+          {securityNote && (
+            <div
+              style={{
+                textAlign: 'center',
+                fontSize: 12,
+                fontWeight: 700,
+                color: colors.goldDeep,
+                marginBottom: 12,
+              }}
+            >
+              {t('profile.securityStub')}
+            </div>
+          )}
+          <div style={{ height: 8 }} />
 
           {savedFlash && (
             <div

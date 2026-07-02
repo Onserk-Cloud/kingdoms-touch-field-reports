@@ -30,6 +30,10 @@ const dict: NsDict = {
     continueBtn: 'Continue',
     notYou: 'Not {name}?',
     editName: 'Edit name',
+    forgotPin: 'Forgot PIN?',
+    contactSupervisor: 'Contact Supervisor',
+    forgotPinHint:
+      'Your supervisor or admin can reset your 4-digit PIN from Manage team — ask them in person or by phone.',
     errInvalid: 'Wrong name or PIN. Check your name and try again.',
     errLocked:
       'Too many attempts. Wait a few minutes and try again, or contact your admin.',
@@ -66,6 +70,10 @@ const dict: NsDict = {
     continueBtn: 'Continuar',
     notYou: '¿No eres {name}?',
     editName: 'Editar nombre',
+    forgotPin: '¿Olvidaste tu PIN?',
+    contactSupervisor: 'Contacta a tu supervisor',
+    forgotPinHint:
+      'Tu supervisor o admin puede reiniciar tu PIN de 4 dígitos desde Gestionar equipo — pídeselo en persona o por teléfono.',
     errInvalid:
       'Nombre o PIN incorrecto. Revisa tu nombre e inténtalo de nuevo.',
     errLocked:

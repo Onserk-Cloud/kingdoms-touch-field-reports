@@ -7,6 +7,12 @@ import { compressPhoto } from '../lib/compress';
 import { useI18n } from '../lib/i18n';
 
 /**
+ * Bottom panel height: 240px on tall screens, but capped at 55% of the screen
+ * so the viewfinder keeps breathing room (and never clips) in landscape.
+ */
+const PANEL_H = 'min(240px, 55%)';
+
+/**
  * "Camera" screen — looks like a viewfinder, but actually delegates to the
  * native camera/picker via <input type=file capture=environment>. That's the
  * recommended UX for web PWAs: full-resolution sensor access without
@@ -39,7 +45,7 @@ export function Camera() {
           top: 0,
           left: 0,
           right: 0,
-          bottom: 240,
+          bottom: PANEL_H,
           background:
             'linear-gradient(180deg, #0e1d14 0%, #1a2a20 50%, #0a1410 100%)',
           overflow: 'hidden',
@@ -57,10 +63,12 @@ export function Camera() {
         <div
           style={{
             position: 'absolute',
-            top: 100,
+            // Clamp the grid insets so it stays visible (not inverted/clipped)
+            // when the viewfinder is short — e.g. a phone held in landscape.
+            top: 'min(100px, 25%)',
             left: 30,
             right: 30,
-            bottom: 80,
+            bottom: 'min(80px, 20%)',
             border: '1px solid rgba(255,255,255,0.10)',
             backgroundImage: `
               linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
@@ -201,6 +209,28 @@ export function Camera() {
             {t('camera.photoBadge', { n: draft.photos.length })}
           </span>
         </div>
+        {/* Flash affordance (decorative — the native camera sheet controls the
+            real flash). Sized 38×38 like the close button so the status pill
+            stays optically centered between the two. */}
+        <div
+          aria-hidden
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            background: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: colors.gold,
+            fontSize: 18,
+            fontWeight: 600,
+            flexShrink: 0,
+          }}
+        >
+          ⚡
+        </div>
       </div>
 
       {/* Bottom panel */}
@@ -210,12 +240,13 @@ export function Camera() {
           bottom: 0,
           left: 0,
           right: 0,
-          height: 240,
+          height: PANEL_H,
           background: '#0a1410',
           borderTopLeftRadius: 26,
           borderTopRightRadius: 26,
           padding: '18px 18px 40px',
           borderTop: `1px solid rgba(196,152,76,0.20)`,
+          overflowY: 'auto',
         }}
       >
         {/* Gallery */}

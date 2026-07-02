@@ -135,7 +135,7 @@ export function Review() {
         className="kt-scroll"
         style={{
           position: 'absolute',
-          top: 110,
+          top: 124,
           bottom: 0,
           left: 0,
           right: 0,
@@ -295,29 +295,37 @@ export function Review() {
               }}
             >
               {draft.description}
-              {draft.notes ? (
-                <>
-                  <div
-                    style={{
-                      height: 1,
-                      background: colors.line,
-                      margin: '10px 0',
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: colors.muted,
-                      fontWeight: 600,
-                      letterSpacing: 0.4,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {t('review.notes')}
-                  </span>{' '}
-                  {draft.notes}
-                </>
-              ) : null}
+            </div>
+          </div>
+        )}
+
+        {draft.notes && (
+          <div style={{ marginTop: 18 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: colors.goldDeep,
+                letterSpacing: 1.4,
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}
+            >
+              {t('review.notes')}
+            </div>
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 14,
+                padding: 14,
+                border: `1px solid ${colors.line}`,
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                color: colors.ink,
+                fontWeight: 500,
+              }}
+            >
+              {draft.notes}
             </div>
           </div>
         )}

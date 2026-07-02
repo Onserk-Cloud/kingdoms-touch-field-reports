@@ -13,7 +13,7 @@ import { useGeolocation } from '../lib/geo';
 import { compressPhoto } from '../lib/compress';
 import { ktStore } from '../lib/offline-store';
 import { formatGps } from '../lib/format';
-import { getCase } from '../lib/cases';
+import { caseRef, getCase } from '../lib/cases';
 import { useI18n } from '../lib/i18n';
 
 export function NewReport() {
@@ -28,7 +28,9 @@ export function NewReport() {
   const [saving, setSaving] = useState(false);
   const [searchParams] = useSearchParams();
   const caseId = searchParams.get('case');
-  const [caseLabel, setCaseLabel] = useState<string | null>(null);
+  const [caseInfo, setCaseInfo] = useState<{ ref: string; job: string } | null>(
+    null,
+  );
 
   // Arrived from an assigned case → prefill job type + location (only when the
   // draft fields are still empty, so we never clobber in-progress edits).
@@ -38,7 +40,7 @@ export function NewReport() {
     void (async () => {
       const c = await getCase(caseId);
       if (!active || !c) return;
-      setCaseLabel(c.jobType);
+      setCaseInfo({ ref: caseRef(c), job: c.jobType });
       setDraft({
         jobType: draft.jobType || c.jobType,
         location: draft.location || c.location || '',
@@ -101,13 +103,17 @@ export function NewReport() {
     draft.location.trim().length > 1 &&
     draft.description.trim().length > 1 &&
     draft.completionConfirmed &&
-    draft.photos.length >= 1;
+    draft.photos.length >= 2;
 
   return (
     <PhoneFrame bg={colors.ivory}>
       <AppBar
-        title={t('newReport.title')}
-        eyebrow={t('newReport.eyebrow')}
+        title={caseInfo ? t('newReport.completeTicket') : t('newReport.title')}
+        eyebrow={
+          caseInfo
+            ? `#${caseInfo.ref} · ${caseInfo.job}`
+            : t('newReport.eyebrow')
+        }
         onBack={() => navigate('/home')}
         trailing={
           <button
@@ -133,7 +139,7 @@ export function NewReport() {
           padding: '14px 20px 0',
           display: 'flex',
           gap: 6,
-          background: '#fff',
+          background: colors.ivory,
         }}
       >
         <div
@@ -175,7 +181,7 @@ export function NewReport() {
           background: colors.ivory,
         }}
       >
-        {caseLabel && (
+        {caseInfo && (
           <div
             style={{
               background: 'rgba(196,152,76,0.12)',
@@ -188,12 +194,16 @@ export function NewReport() {
               color: colors.goldDeep,
             }}
           >
-            {t('cases.workingOnCase', { job: caseLabel })}
+            {t('cases.workingOnCase', { job: caseInfo.job })}
           </div>
         )}
 
         {/* GPS card */}
-        <GpsCard state={gps} onRetry={capture} />
+        <GpsCard
+          state={gps}
+          address={draft.location.trim() || undefined}
+          onRetry={capture}
+        />
 
         <Field
           label={t('newReport.jobTypeLabel')}
@@ -381,9 +391,12 @@ export function NewReport() {
 
 function GpsCard({
   state,
+  address,
   onRetry,
 }: {
   state: ReturnType<typeof useGeolocation>['state'];
+  /** Human-readable job address (falls back to the draft's location field). */
+  address?: string;
   onRetry: () => void;
 }) {
   const { t } = useI18n();
@@ -473,11 +486,25 @@ function GpsCard({
         >
           {status.title}
         </div>
+        {address && (
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#fff',
+              marginTop: 3,
+              letterSpacing: -0.1,
+              lineHeight: 1.3,
+            }}
+          >
+            {address}
+          </div>
+        )}
         <div
           style={{
-            fontSize: 13,
-            color: 'rgba(255,255,255,0.85)',
-            marginTop: 4,
+            fontSize: address ? 11.5 : 13,
+            color: address ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.85)',
+            marginTop: address ? 2 : 4,
             fontWeight: 500,
             lineHeight: 1.3,
           }}

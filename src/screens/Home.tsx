@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { TabBar } from '../components/TabBar';
@@ -9,7 +9,7 @@ import { useSessionStore } from '../store/session';
 import { ktStore } from '../lib/offline-store';
 import { useUnreadCount } from '../lib/notifications';
 import { formatDateLong } from '../lib/format';
-import { listAssignedCases, type Case } from '../lib/cases';
+import { caseRef, dueLabel, listAssignedCases, type Case } from '../lib/cases';
 import { CaseCard } from '../components/CaseCard';
 import { useI18n } from '../lib/i18n';
 
@@ -22,9 +22,7 @@ export function Home() {
   const [assignedCases, setAssignedCases] = useState<Case[]>([]);
   const [online, setOnline] = useState(navigator.onLine);
   const [counts, setCounts] = useState({
-    today: 0,
     pending: 0,
-    week: 0,
     total: 0,
   });
 
@@ -43,20 +41,8 @@ export function Home() {
     if (!employee) return;
     void (async () => {
       const all = await ktStore.listReports(employee.id);
-      const now = Date.now();
-      const dayMs = 24 * 60 * 60 * 1000;
       setCounts({
         total: all.length,
-        // "Submitted today" — only count reports that actually left the device
-        // (exclude drafts/queued/errors), matching the card label.
-        today: all.filter(
-          (r) =>
-            (r.status === 'submitted' ||
-              r.status === 'reviewed' ||
-              r.status === 'needs_update') &&
-            now - r.createdAt < dayMs,
-        ).length,
-        week: all.filter((r) => now - r.createdAt < dayMs * 7).length,
         pending: all.filter((r) => r.status === 'pending').length,
       });
     })();
@@ -76,6 +62,34 @@ export function Home() {
 
   const greeting = t(greetingKeyByHour());
   const dateLabel = formatDateLong(Date.now());
+
+  // Case pipeline trio, derived straight from the assigned list.
+  const pipeline = useMemo(() => {
+    let toDo = 0;
+    let inProgress = 0;
+    let done = 0;
+    for (const c of assignedCases) {
+      if (c.status === 'in_progress') inProgress += 1;
+      else if (
+        c.status === 'submitted' ||
+        c.status === 'in_review' ||
+        c.status === 'approved'
+      )
+        done += 1;
+      else toDo += 1; // available | assigned | needs_changes
+    }
+    return { toDo, inProgress, done };
+  }, [assignedCases]);
+
+  const nextUp = useMemo(() => pickNextUp(assignedCases), [assignedCases]);
+  const nextUpMeta = nextUp
+    ? [
+        nextUp.location ?? nextUp.clientOrSite,
+        dueLabel(nextUp.dueDate, nextUp.dueTime),
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
 
   return (
     <PhoneFrame bg={colors.ivory}>
@@ -239,126 +253,239 @@ export function Home() {
 
       {/* Body */}
       <div style={{ padding: '22px 20px 110px' }}>
-        <div
-          onClick={() => navigate('/new-report')}
-          role="button"
-          tabIndex={0}
-          aria-label={t('home.startNewReport')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              navigate('/new-report');
-            }
-          }}
-          className="kt-tap"
-          style={{
-            background: '#fff',
-            borderRadius: 22,
-            padding: 18,
-            border: `1px solid ${colors.line}`,
-            boxShadow: '0 6px 20px rgba(31,61,43,0.06)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-            marginTop: -22,
-            position: 'relative',
-            cursor: 'pointer',
-          }}
-        >
+        {nextUp ? (
+          /* Next-up featured ticket */
           <div
+            onClick={() => navigate(`/cases/${nextUp.id}`)}
+            role="button"
+            tabIndex={0}
+            aria-label={`${t('home.nextUp', { ref: caseRef(nextUp) })} · ${nextUp.jobType}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(`/cases/${nextUp.id}`);
+              }
+            }}
+            className="kt-tap"
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              flexShrink: 0,
-              background: `linear-gradient(135deg, ${colors.gold} 0%, ${colors.goldDeep} 100%)`,
+              background: '#fff',
+              borderRadius: 22,
+              padding: 18,
+              border: `1px solid ${colors.line}`,
+              boxShadow: '0 6px 20px rgba(31,61,43,0.06)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)',
+              gap: 14,
+              marginTop: -22,
+              position: 'relative',
+              cursor: 'pointer',
             }}
           >
-            <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-              <rect
-                x="5"
-                y="3"
-                width="16"
-                height="20"
-                rx="2.5"
-                stroke="#fff"
-                strokeWidth="1.8"
-              />
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 16,
+                flexShrink: 0,
+                background: `linear-gradient(135deg, ${colors.gold} 0%, ${colors.goldDeep} 100%)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)',
+              }}
+            >
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <path
+                  d="M5 8l3-4h10l3 4v12a2 2 0 01-2 2H7a2 2 0 01-2-2V8z"
+                  stroke="#fff"
+                  strokeWidth="1.8"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 12l2.5 2.5L17 10"
+                  stroke="#fff"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  color: colors.goldDeep,
+                  letterSpacing: 1.4,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {t('home.nextUp', { ref: caseRef(nextUp) })}
+              </div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: colors.charcoal,
+                  letterSpacing: -0.2,
+                  marginTop: 3,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {nextUp.jobType}
+              </div>
+              {nextUpMeta && (
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    color: colors.muted,
+                    marginTop: 3,
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {nextUpMeta}
+                </div>
+              )}
+            </div>
+            <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
               <path
-                d="M9 10h8M9 14h8M9 18h5"
-                stroke="#fff"
-                strokeWidth="1.8"
+                d="M1 1l7 6-7 6"
+                stroke={colors.forest}
+                strokeWidth="2"
                 strokeLinecap="round"
-              />
-              <circle
-                cx="20"
-                cy="22"
-                r="4.5"
-                fill={colors.forest}
-                stroke="#fff"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M18 22h4M20 20v4"
-                stroke="#fff"
-                strokeWidth="1.5"
-                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             </svg>
           </div>
-          <div style={{ flex: 1 }}>
+        ) : (
+          /* Fallback CTA when nothing is assigned */
+          <div
+            onClick={() => navigate('/new-report')}
+            role="button"
+            tabIndex={0}
+            aria-label={t('home.startNewReport')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate('/new-report');
+              }
+            }}
+            className="kt-tap"
+            style={{
+              background: '#fff',
+              borderRadius: 22,
+              padding: 18,
+              border: `1px solid ${colors.line}`,
+              boxShadow: '0 6px 20px rgba(31,61,43,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              marginTop: -22,
+              position: 'relative',
+              cursor: 'pointer',
+            }}
+          >
             <div
               style={{
-                fontSize: 17,
-                fontWeight: 700,
-                color: colors.charcoal,
-                letterSpacing: -0.2,
+                width: 56,
+                height: 56,
+                borderRadius: 16,
+                flexShrink: 0,
+                background: `linear-gradient(135deg, ${colors.gold} 0%, ${colors.goldDeep} 100%)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)',
               }}
             >
-              {t('home.startNewReport')}
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <rect
+                  x="5"
+                  y="3"
+                  width="16"
+                  height="20"
+                  rx="2.5"
+                  stroke="#fff"
+                  strokeWidth="1.8"
+                />
+                <path
+                  d="M9 10h8M9 14h8M9 18h5"
+                  stroke="#fff"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="20"
+                  cy="22"
+                  r="4.5"
+                  fill={colors.forest}
+                  stroke="#fff"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M18 22h4M20 20v4"
+                  stroke="#fff"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
             </div>
-            <div
-              style={{
-                fontSize: 12.5,
-                color: colors.muted,
-                marginTop: 2,
-                fontWeight: 500,
-              }}
-            >
-              {t('home.startNewReportSub')}
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: 17,
+                  fontWeight: 700,
+                  color: colors.charcoal,
+                  letterSpacing: -0.2,
+                }}
+              >
+                {t('home.startNewReport')}
+              </div>
+              <div
+                style={{
+                  fontSize: 12.5,
+                  color: colors.muted,
+                  marginTop: 2,
+                  fontWeight: 500,
+                }}
+              >
+                {t('home.startNewReportSub')}
+              </div>
             </div>
+            <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
+              <path
+                d="M1 1l7 6-7 6"
+                stroke={colors.forest}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
-          <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
-            <path
-              d="M1 1l7 6-7 6"
-              stroke={colors.forest}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
+        )}
 
+        {/* Case pipeline trio */}
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           {[
             {
-              n: counts.today,
-              label: t('home.statSubmittedToday'),
-              color: colors.forest,
-            },
-            {
-              n: counts.pending,
-              label: t('home.statAwaitingSync'),
+              n: pipeline.toDo,
+              label: t('home.statToDo'),
               color: colors.gold,
             },
             {
-              n: counts.week,
-              label: t('home.statThisWeek'),
-              color: colors.sage,
+              n: pipeline.inProgress,
+              label: t('home.statInProgress'),
+              color: colors.blue,
+            },
+            {
+              n: pipeline.done,
+              label: t('home.statDoneToday'),
+              color: colors.forest,
             },
           ].map((s) => (
             <div
@@ -397,32 +524,86 @@ export function Home() {
           ))}
         </div>
 
-        {assignedCases.length > 0 && (
-          <div style={{ marginTop: 22 }}>
+        {/* Assigned to you — heading always renders */}
+        <div
+          style={{
+            marginTop: 22,
+            marginBottom: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: colors.goldDeep,
+              letterSpacing: 1.6,
+              textTransform: 'uppercase',
+            }}
+          >
+            {t('cases.assignedToYou')}
+          </div>
+          <button
+            onClick={() => navigate('/my-reports')}
+            className="kt-tap"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontSize: 11,
+              fontWeight: 700,
+              color: colors.forest,
+              letterSpacing: 0.4,
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+            }}
+          >
+            {t('home.seeAll')}
+          </button>
+        </div>
+        {assignedCases.length > 0 ? (
+          assignedCases.map((c) => (
+            <CaseCard
+              key={c.id}
+              c={c}
+              onClick={() => navigate(`/cases/${c.id}`)}
+              subtitle={
+                c.status === 'available' ? t('cases.poolAvailable') : undefined
+              }
+            />
+          ))
+        ) : (
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              padding: '22px 16px',
+              border: `1px dashed ${colors.lineStrong}`,
+              textAlign: 'center',
+            }}
+          >
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: colors.goldDeep,
-                letterSpacing: 1.6,
-                textTransform: 'uppercase',
-                marginBottom: 10,
+                fontSize: 13.5,
+                fontWeight: 600,
+                color: colors.muted,
               }}
             >
-              {t('cases.assignedToYou')}
+              {t('home.emptyAssigned')}
             </div>
-            {assignedCases.map((c) => (
-              <CaseCard
-                key={c.id}
-                c={c}
-                onClick={() => navigate(`/cases/${c.id}`)}
-                subtitle={
-                  c.status === 'available'
-                    ? t('cases.poolAvailable')
-                    : undefined
-                }
-              />
-            ))}
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: colors.muted,
+                marginTop: 4,
+                opacity: 0.8,
+              }}
+            >
+              {t('home.emptyAssignedSub')}
+            </div>
           </div>
         )}
 
@@ -584,4 +765,38 @@ function greetingKeyByHour(): string {
   if (h < 12) return 'home.greetingMorning';
   if (h < 18) return 'home.greetingAfternoon';
   return 'home.greetingEvening';
+}
+
+const PRIORITY_RANK: Record<Case['priority'], number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+/** Statuses still on the employee's plate (not handed off for review). */
+const NEXT_UP_STATUSES: Case['status'][] = [
+  'available',
+  'assigned',
+  'in_progress',
+  'needs_changes',
+];
+
+/** Sortable due timestamp; undated cases go last within a priority. */
+function dueStamp(c: Case): number {
+  if (!c.dueDate) return Number.MAX_SAFE_INTEGER;
+  const ts = Date.parse(`${c.dueDate}T${c.dueTime ?? '23:59'}`);
+  return Number.isNaN(ts) ? Number.MAX_SAFE_INTEGER : ts;
+}
+
+/** Top of the pile: highest priority first, then soonest due. */
+function pickNextUp(list: Case[]): Case | null {
+  const pool = list.filter((c) => NEXT_UP_STATUSES.includes(c.status));
+  const candidates = pool.length > 0 ? pool : list;
+  if (candidates.length === 0) return null;
+  return [...candidates].sort(
+    (a, b) =>
+      PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+      dueStamp(a) - dueStamp(b),
+  )[0];
 }

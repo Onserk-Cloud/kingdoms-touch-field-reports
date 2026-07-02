@@ -18,6 +18,12 @@ const dict: NsDict = {
     caseNeedsChangesBody: 'Your reviewer asked for changes on a case.',
     caseDueSoonTitle: 'Case due soon',
     caseDueSoonBody: 'A case is due soon — please complete it.',
+    groupDeadlines: 'Deadlines',
+    groupUpdates: 'Updates',
+    openCase: 'Open case',
+    snooze: 'Snooze',
+    timeNow: 'now',
+    needAction: '{n} need action',
   },
   es: {
     title: 'Notificaciones',
@@ -36,6 +42,12 @@ const dict: NsDict = {
     caseNeedsChangesBody: 'Tu revisor pidió cambios en un caso.',
     caseDueSoonTitle: 'Caso por vencer',
     caseDueSoonBody: 'Un caso está por vencer — complétalo pronto.',
+    groupDeadlines: 'Plazos',
+    groupUpdates: 'Novedades',
+    openCase: 'Abrir caso',
+    snooze: 'Posponer',
+    timeNow: 'ahora',
+    needAction: '{n} por atender',
   },
 };
 

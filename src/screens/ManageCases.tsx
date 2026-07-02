@@ -18,6 +18,11 @@ function todayStr(): string {
   return new Date().toLocaleDateString('en-CA');
 }
 
+/** Approved and closed cases are done — everything else is active work. */
+function isDone(c: Case): boolean {
+  return c.status === 'approved' || c.status === 'closed';
+}
+
 export function ManageCases() {
   const { t } = useI18n();
   const { colors } = useTheme();
@@ -42,29 +47,31 @@ export function ManageCases() {
     }
   }
 
+  // KPI counts derived from the real status pipeline (no aliasing).
   const summary = useMemo(() => {
     const today = todayStr();
-    const openCases = cases.filter((c) => c.status !== 'closed');
+    const active = cases.filter((c) => !isDone(c));
     return {
-      open: openCases.length,
-      overdue: openCases.filter((c) => c.dueDate && c.dueDate < today).length,
-      high: openCases.filter((c) => c.priority === 'high').length,
+      open: active.length,
+      inReview: cases.filter((c) => c.status === 'in_review').length,
+      overdue: active.filter((c) => c.dueDate && c.dueDate < today).length,
+      high: active.filter((c) => c.priority === 'high').length,
     };
   }, [cases]);
 
-  // Only show filter chips for statuses that actually exist (dynamic).
-  const presentStatuses = useMemo(
-    () => CASE_STATUS_ORDER.filter((s) => cases.some((c) => c.status === s)),
-    [cases],
-  );
+  // One chip per real workflow status, always in pipeline order —
+  // 'In review' and 'Approved' stay visible even when currently empty.
+  const filterChips: Array<Case['status'] | 'all'> = [
+    'all',
+    ...CASE_STATUS_ORDER,
+  ];
 
   const visible = cases.filter((c) => {
     if (filter === 'all') return true;
-    if (filter === 'open') return c.status !== 'closed';
+    if (filter === 'open') return !isDone(c);
     if (filter === 'overdue')
-      return c.status !== 'closed' && !!c.dueDate && c.dueDate < todayStr();
-    if (filter === 'high')
-      return c.status !== 'closed' && c.priority === 'high';
+      return !isDone(c) && !!c.dueDate && c.dueDate < todayStr();
+    if (filter === 'high') return !isDone(c) && c.priority === 'high';
     return c.status === filter;
   });
 
@@ -153,8 +160,15 @@ export function ManageCases() {
           padding: '16px 20px 30px',
         }}
       >
-        {/* Summary */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        {/* Summary — KPI tiles derived from the real status pipeline */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 8,
+            marginBottom: 14,
+          }}
+        >
           <SummaryStat
             n={summary.open}
             label={t('cases.summaryOpen')}
@@ -162,6 +176,16 @@ export function ManageCases() {
             colors={colors}
             active={filter === 'open'}
             onClick={() => setFilter((f) => (f === 'open' ? 'all' : 'open'))}
+          />
+          <SummaryStat
+            n={summary.inReview}
+            label={t('cases.status_inReview')}
+            tint={colors.gold}
+            colors={colors}
+            active={filter === 'in_review'}
+            onClick={() =>
+              setFilter((f) => (f === 'in_review' ? 'all' : 'in_review'))
+            }
           />
           <SummaryStat
             n={summary.overdue}
@@ -193,7 +217,7 @@ export function ManageCases() {
             paddingBottom: 12,
           }}
         >
-          {(['all', ...presentStatuses] as const).map((f) => {
+          {filterChips.map((f) => {
             const on = filter === f;
             return (
               <button
@@ -295,21 +319,21 @@ function SummaryStat({
       }
       className={onClick ? 'kt-tap' : undefined}
       style={{
-        flex: 1,
-        padding: '12px 10px',
+        padding: '12px 6px',
         background: '#fff',
         borderRadius: 14,
         border: `1.5px solid ${active ? tint : colors.line}`,
         cursor: onClick ? 'pointer' : 'default',
+        textAlign: 'center',
       }}
     >
       <div
         style={{
           fontFamily: 'Fraunces, Georgia, serif',
-          fontSize: 26,
-          fontWeight: 500,
+          fontSize: 24,
+          fontWeight: 600,
           color: tint,
-          letterSpacing: -0.4,
+          letterSpacing: -0.3,
           lineHeight: 1,
         }}
       >
@@ -317,12 +341,13 @@ function SummaryStat({
       </div>
       <div
         style={{
-          fontSize: 10.5,
+          fontSize: 9.5,
           fontWeight: 700,
           color: colors.muted,
           marginTop: 4,
-          letterSpacing: 0.3,
+          letterSpacing: 0.2,
           textTransform: 'uppercase',
+          lineHeight: 1.15,
         }}
       >
         {label}

@@ -55,6 +55,10 @@ export function PinLogin() {
   const [lastName, setLastName] = useState('');
   const [pinStep, setPinStep] = useState<'identify' | 'enter'>('identify');
 
+  // "Forgot PIN?" — PINs are reset in person by a supervisor/admin (Manage
+  // team), so the action shows a short explainer instead of a tel:/mailto:.
+  const [showForgotHint, setShowForgotHint] = useState(false);
+
   const identified = !!deviceEmp || pinStep === 'enter';
   const fullName = deviceEmp
     ? deviceEmp.name
@@ -218,11 +222,16 @@ export function PinLogin() {
         style={{
           position: 'absolute',
           inset: 0,
+          // Landscape fix: a rotated phone is only ~360px tall. Let the
+          // column scroll so the keypad and Continue button stay reachable.
+          // (The `marginTop: auto` push below self-collapses to 0 whenever
+          // content overflows, so nothing gets shoved off-screen when short.)
+          overflowY: 'auto',
           padding: '52px 28px 30px',
           display: 'flex',
           flexDirection: 'column',
         }}
-        className="kt-safe-top"
+        className="kt-scroll kt-safe-top"
       >
         {/* Centered brand hero */}
         <div style={{ textAlign: 'center' }}>
@@ -496,11 +505,55 @@ export function PinLogin() {
           </div>
         )}
 
-        <div style={{ textAlign: 'center', marginTop: 18, marginBottom: 8 }}>
+        {mode === 'pin' && (
+          <div style={{ textAlign: 'center', marginTop: 18 }}>
+            <span
+              style={{ fontSize: 13, color: colors.muted, fontWeight: 500 }}
+            >
+              {t('login.forgotPin')}{' '}
+            </span>
+            <button
+              onClick={() => setShowForgotHint((v) => !v)}
+              className="kt-tap"
+              style={{
+                fontSize: 13,
+                color: colors.forest,
+                fontWeight: 700,
+                textDecoration: 'underline',
+                textUnderlineOffset: 3,
+              }}
+            >
+              {t('login.contactSupervisor')}
+            </button>
+            {showForgotHint && (
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: colors.muted,
+                  marginTop: 6,
+                  fontWeight: 500,
+                  lineHeight: 1.4,
+                  padding: '0 10px',
+                }}
+              >
+                {t('login.forgotPinHint')}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div
+          style={{
+            textAlign: 'center',
+            marginTop: mode === 'pin' ? 10 : 18,
+            marginBottom: 8,
+          }}
+        >
           <button
             onClick={() => {
               setMode(mode === 'pin' ? 'email' : 'pin');
               setError(null);
+              setShowForgotHint(false);
             }}
             className="kt-tap"
             style={{

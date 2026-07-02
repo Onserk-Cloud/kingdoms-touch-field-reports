@@ -81,6 +81,17 @@ export async function markRead(id: string): Promise<void> {
   }
 }
 
+/**
+ * Snooze stub — true snoozing (hiding a notification and re-surfacing it
+ * after a delay) needs backend scheduling that doesn't exist yet. For now it
+ * simply marks the notification read so it stops counting as actionable; the
+ * screen removes it from the current list. Swap the body for a real
+ * `snoozed_until` write once the backend supports it.
+ */
+export async function snoozeNotification(id: string): Promise<void> {
+  await markRead(id);
+}
+
 export async function markAllRead(recipientId: string): Promise<void> {
   if (HAS_SUPABASE) {
     const sb = getSupabase();

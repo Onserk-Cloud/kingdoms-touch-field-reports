@@ -2,7 +2,7 @@ import type { NsDict } from './types';
 const dict: NsDict = {
   en: {
     home: 'Home',
-    reports: 'Reports',
+    reports: 'Tickets',
     new: 'New',
     profile: 'Profile',
     overview: 'Overview',
@@ -11,7 +11,7 @@ const dict: NsDict = {
   },
   es: {
     home: 'Inicio',
-    reports: 'Reportes',
+    reports: 'Tickets',
     new: 'Nuevo',
     profile: 'Perfil',
     overview: 'Resumen',
