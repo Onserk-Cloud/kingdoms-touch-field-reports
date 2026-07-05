@@ -71,10 +71,12 @@ export async function subscribeToPush(
     // Get the service worker registration
     const reg = await navigator.serviceWorker.ready;
 
-    // Get VAPID public key from environment
-    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as
-      | string
-      | undefined;
+    // Get VAPID public key from environment. Sanitize hard: env values set
+    // via CLI pipes can carry an invisible trailing newline (or quotes),
+    // which makes atob() throw "The string contains invalid characters." —
+    // that single stray byte blocked every device registration.
+    const rawKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+    const vapidPublicKey = rawKey?.replace(/[^A-Za-z0-9_-]/g, '') ?? '';
     if (!vapidPublicKey) {
       return {
         status: 'error',
