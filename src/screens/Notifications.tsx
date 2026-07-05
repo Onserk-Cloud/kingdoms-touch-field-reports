@@ -27,6 +27,8 @@ function titleKey(type: string): string {
   if (type === 'case_needs_changes') return 'notifications.caseNeedsChangesTitle';
   if (type === 'case_due_soon') return 'notifications.caseDueSoonTitle';
   if (type === 'case_comment') return 'notifications.caseCommentTitle';
+  if (type === 'case_photo') return 'notifications.casePhotoTitle';
+  if (type === 'case_approved') return 'notifications.caseApprovedTitle';
   if (type === 'test') return 'notifications.testTitle';
   return 'notifications.newReportTitle';
 }
@@ -38,6 +40,8 @@ function bodyKey(type: string): string {
   if (type === 'case_needs_changes') return 'notifications.caseNeedsChangesBody';
   if (type === 'case_due_soon') return 'notifications.caseDueSoonBody';
   if (type === 'case_comment') return 'notifications.caseCommentBody';
+  if (type === 'case_photo') return 'notifications.casePhotoBody';
+  if (type === 'case_approved') return 'notifications.caseApprovedBody';
   if (type === 'test') return 'notifications.testBody';
   return 'notifications.newReportBody';
 }
@@ -52,9 +56,10 @@ function kindOf(type: string): Kind {
   if (type === 'case_due_soon') return 'soon';
   // "Changes requested" shares the danger/triangle treatment: it needs action.
   if (NOTE_TYPES.includes(type)) return 'overdue';
-  if (type === 'reviewed' || type === 'test') return 'done';
+  if (type === 'reviewed' || type === 'test' || type === 'case_approved')
+    return 'done';
   if (type === 'case_assigned') return 'assigned';
-  if (type === 'case_comment') return 'comment';
+  if (type === 'case_comment' || type === 'case_photo') return 'comment';
   return 'review'; // new_report + unknown types
 }
 

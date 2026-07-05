@@ -571,7 +571,8 @@ export type CaseActivityKind =
   | 'assigned'
   | 'created'
   | 'submitted'
-  | 'reopened';
+  | 'reopened'
+  | 'photo';
 
 export interface CaseActivity {
   id: string;

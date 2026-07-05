@@ -62,7 +62,14 @@ interface AssigneeProfile {
 /** Per-kind accent colour for the activity timeline nodes. */
 function eventColor(
   kind: CaseActivityKind,
-  c: { gold: string; goldDeep: string; blue: string; forest: string; danger: string },
+  c: {
+    gold: string;
+    goldDeep: string;
+    blue: string;
+    forest: string;
+    danger: string;
+    sage: string;
+  },
 ): string {
   switch (kind) {
     case 'created':
@@ -73,6 +80,8 @@ function eventColor(
       return c.blue;
     case 'submitted':
       return c.forest;
+    case 'photo':
+      return c.sage;
     default:
       // reopened
       return c.danger;
@@ -109,6 +118,27 @@ function eventGlyph(kind: CaseActivityKind) {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+      );
+    case 'photo':
+      return (
+        <>
+          <rect
+            x="2.5"
+            y="5"
+            width="11"
+            height="8"
+            rx="1.8"
+            stroke="#fff"
+            strokeWidth="1.4"
+          />
+          <path
+            d="M6 5l1-1.6h2L10 5"
+            stroke="#fff"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
+          <circle cx="8" cy="9" r="2" stroke="#fff" strokeWidth="1.4" />
+        </>
       );
     default:
       // reopened
@@ -726,7 +756,9 @@ export function CaseDetail() {
                               ? t('cases.evtAssigned')
                               : a.kind === 'submitted'
                                 ? t('cases.evtSubmitted')
-                                : t('cases.evtReopened')}
+                                : a.kind === 'photo'
+                                  ? t('cases.evtPhoto')
+                                  : t('cases.evtReopened')}
                     </span>
                     <span
                       style={{ fontSize: 10.5, color: colors.muted, flexShrink: 0 }}

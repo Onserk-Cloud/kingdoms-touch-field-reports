@@ -107,6 +107,18 @@ export function NewReport() {
     draft.completionConfirmed &&
     draft.photos.length >= 2;
 
+  // What still blocks the submit — shown under the disabled button so the
+  // user never has to guess.
+  const missing = [
+    draft.jobType.trim().length > 1 ? null : t('newReport.missJobType'),
+    draft.location.trim().length > 1 ? null : t('newReport.missLocation'),
+    draft.description.trim().length > 1 ? null : t('newReport.missDescription'),
+    draft.photos.length >= 2
+      ? null
+      : t('newReport.missPhotos', { n: 2 - draft.photos.length }),
+    draft.completionConfirmed ? null : t('newReport.missConfirm'),
+  ].filter(Boolean) as string[];
+
   return (
     <PhoneFrame bg={colors.ivory}>
       <AppBar
@@ -384,6 +396,20 @@ export function NewReport() {
         >
           {t('newReport.reviewSubmit')}
         </PrimaryButton>
+        {!canContinue && missing.length > 0 && (
+          <div
+            style={{
+              fontSize: 12,
+              color: colors.muted,
+              marginTop: 8,
+              textAlign: 'center',
+              fontWeight: 600,
+              lineHeight: 1.45,
+            }}
+          >
+            {t('newReport.missingLabel')} {missing.join(' · ')}
+          </div>
+        )}
         <div style={{ height: 10 }} />
         <SecondaryButton onClick={handleSaveOffline}>
           {saving ? t('newReport.saving') : t('newReport.saveOffline')}

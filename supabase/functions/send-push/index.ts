@@ -32,6 +32,10 @@ function titleFor(type: string): string {
       return 'Case due soon';
     case 'case_comment':
       return 'New comment';
+    case 'case_photo':
+      return 'New photo added';
+    case 'case_approved':
+      return 'Case approved';
     case 'new_report':
       return 'New report submitted';
     case 'reviewed':
