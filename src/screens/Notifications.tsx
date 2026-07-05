@@ -26,6 +26,7 @@ function titleKey(type: string): string {
   if (type === 'case_assigned') return 'notifications.caseAssignedTitle';
   if (type === 'case_needs_changes') return 'notifications.caseNeedsChangesTitle';
   if (type === 'case_due_soon') return 'notifications.caseDueSoonTitle';
+  if (type === 'case_comment') return 'notifications.caseCommentTitle';
   if (type === 'test') return 'notifications.testTitle';
   return 'notifications.newReportTitle';
 }
@@ -36,6 +37,7 @@ function bodyKey(type: string): string {
   if (type === 'case_assigned') return 'notifications.caseAssignedBody';
   if (type === 'case_needs_changes') return 'notifications.caseNeedsChangesBody';
   if (type === 'case_due_soon') return 'notifications.caseDueSoonBody';
+  if (type === 'case_comment') return 'notifications.caseCommentBody';
   if (type === 'test') return 'notifications.testBody';
   return 'notifications.newReportBody';
 }
@@ -43,7 +45,7 @@ function bodyKey(type: string): string {
 const NOTE_TYPES = ['needs_update', 'case_needs_changes'];
 
 /** Visual family of a notification — drives the icon tile + card accents. */
-type Kind = 'overdue' | 'soon' | 'review' | 'done' | 'assigned';
+type Kind = 'overdue' | 'soon' | 'review' | 'done' | 'assigned' | 'comment';
 
 function kindOf(type: string): Kind {
   if (type === 'case_overdue') return 'overdue';
@@ -52,6 +54,7 @@ function kindOf(type: string): Kind {
   if (NOTE_TYPES.includes(type)) return 'overdue';
   if (type === 'reviewed' || type === 'test') return 'done';
   if (type === 'case_assigned') return 'assigned';
+  if (type === 'case_comment') return 'comment';
   return 'review'; // new_report + unknown types
 }
 
@@ -86,16 +89,21 @@ export function Notifications() {
   const [testState, setTestState] = useState<'idle' | 'sending' | 'sent' | 'error'>(
     'idle',
   );
+  // Raw failure detail (e.g. the exact subscribe/store error) — shown small so
+  // a remote screenshot is enough to diagnose a device.
+  const [pushDetail, setPushDetail] = useState<string | null>(null);
 
   async function sendTest() {
     if (!me) return;
     setTestState('sending');
+    setPushDetail(null);
     // Make sure THIS device is actually registered before firing the test,
     // otherwise the push has no target and only the in-app row appears.
     const sub = await subscribeToPush(me.id);
     if (sub.status !== 'granted') {
       setTestState('error');
       setPushState(sub.status === 'denied' ? 'denied' : 'error');
+      if (sub.status === 'error') setPushDetail(sub.error);
       return;
     }
     const ok = await sendTestNotification(me.id);
@@ -128,6 +136,7 @@ export function Notifications() {
                 ? 'unsupported'
                 : 'error',
         );
+        if (res.status === 'error') setPushDetail(res.error);
       });
       return;
     }
@@ -137,6 +146,7 @@ export function Notifications() {
   async function enablePush() {
     if (!me) return;
     setPushState('enabling');
+    setPushDetail(null);
     const res = await subscribeToPush(me.id);
     setPushState(
       res.status === 'granted'
@@ -147,6 +157,7 @@ export function Notifications() {
             ? 'unsupported'
             : 'error',
     );
+    if (res.status === 'error') setPushDetail(res.error);
   }
 
   useEffect(() => {
@@ -277,6 +288,26 @@ export function Notifications() {
         </>
       ),
     },
+    comment: {
+      c: colors.blue,
+      bg: colors.blueSoft,
+      icon: (c) => (
+        <>
+          <path
+            d="M3 4.5h12a1 1 0 011 1v6a1 1 0 01-1 1H9l-3.5 3v-3H3a1 1 0 01-1-1v-6a1 1 0 011-1z"
+            stroke={c}
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M5.5 8h7M5.5 10.2h4.5"
+            stroke={c}
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+        </>
+      ),
+    },
   };
 
   const groups = [
@@ -393,7 +424,7 @@ export function Notifications() {
             }}
           >
             {n.refLabel ? `${n.refLabel} — ` : ''}
-            {NOTE_TYPES.includes(n.type) && n.note
+            {(NOTE_TYPES.includes(n.type) || n.type === 'case_comment') && n.note
               ? n.note
               : t(bodyKey(n.type))}
           </div>
@@ -559,6 +590,30 @@ export function Notifications() {
                 {t('notifications.testError')}
               </div>
             )}
+            {pushDetail && (
+              <div
+                style={{
+                  fontSize: 10,
+                  color: colors.muted,
+                  marginTop: 5,
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {pushDetail}
+              </div>
+            )}
+            <div
+              style={{
+                fontSize: 9.5,
+                color: colors.muted,
+                marginTop: 6,
+                opacity: 0.7,
+                textAlign: 'right',
+              }}
+            >
+              v 2.5
+            </div>
           </div>
         ) : pushState !== 'unsupported' ? (
           <div
@@ -629,6 +684,20 @@ export function Notifications() {
                 }}
               >
                 {t('push.error')}
+                {pushDetail && (
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: colors.muted,
+                      marginTop: 4,
+                      fontFamily: 'ui-monospace, Menlo, monospace',
+                      fontWeight: 500,
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {pushDetail}
+                  </div>
+                )}
               </div>
             )}
             <div

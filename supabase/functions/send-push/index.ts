@@ -30,18 +30,24 @@ function titleFor(type: string): string {
       return 'Changes requested';
     case 'case_due_soon':
       return 'Case due soon';
+    case 'case_comment':
+      return 'New comment';
     case 'new_report':
       return 'New report submitted';
     case 'reviewed':
       return 'Report approved';
     case 'needs_update':
       return 'Changes requested';
+    case 'test':
+      return 'Test notification';
     default:
       return 'Kingdoms Touch';
   }
 }
 
-function urlFor(type: string): string {
+function urlFor(type: string, caseId?: string | null): string {
+  // Deep-link straight into the case when we know which one it is.
+  if (caseId) return `/cases/${caseId}`;
   if (
     type === 'case_assigned' ||
     type === 'case_needs_changes' ||
@@ -80,7 +86,8 @@ Deno.serve(async (req: Request) => {
       `${body?.ref_label ? String(body.ref_label) : ''}${
         body?.note ? ` — ${body.note}` : ''
       }`.trim();
-    const link = (body?.url as string) ?? urlFor(type);
+    const link =
+      (body?.url as string) ?? urlFor(type, body?.case_id as string | null);
 
     const admin = createClient(url, serviceKey);
     const { data: subs } = await admin

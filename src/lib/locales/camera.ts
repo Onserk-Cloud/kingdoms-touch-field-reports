@@ -10,6 +10,10 @@ const dict: NsDict = {
     openGallery: 'Open gallery',
     takePhoto: 'Take photo',
     done: 'DONE',
+    usePhoto: 'Use photo',
+    retake: 'Retake',
+    previewCount: '{i} of {n}',
+    previewAlt: 'Photo preview',
   },
   es: {
     closeCamera: 'Cerrar cámara',
@@ -21,6 +25,10 @@ const dict: NsDict = {
     openGallery: 'Abrir galería',
     takePhoto: 'Tomar foto',
     done: 'LISTO',
+    usePhoto: 'Usar foto',
+    retake: 'Repetir',
+    previewCount: '{i} de {n}',
+    previewAlt: 'Vista previa de la foto',
   },
 };
 export default dict;

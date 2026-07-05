@@ -1,10 +1,16 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { useTheme } from '../theme-context';
 import { useDraftStore } from '../store/draft';
 import { compressPhoto } from '../lib/compress';
 import { useI18n } from '../lib/i18n';
+
+/** A captured photo waiting for the user to confirm or retake it. */
+interface PendingShot {
+  blob: Blob;
+  url: string;
+}
 
 /**
  * Bottom panel height: 240px on tall screens, but capped at 55% of the screen
@@ -27,14 +33,37 @@ export function Camera() {
 
   const open = () => fileRef.current?.click();
 
+  // Captured shots wait in a queue: the user confirms ("use photo") or
+  // retakes each one before it enters the report draft.
+  const [pending, setPending] = useState<PendingShot[]>([]);
+  const current = pending[0] ?? null;
+
   const onFiles = async (files: FileList | null) => {
     if (!files) return;
+    const staged: PendingShot[] = [];
     for (const f of Array.from(files)) {
       const compressed = await compressPhoto(f);
-      draft.addPhoto(compressed);
+      staged.push({ blob: compressed, url: URL.createObjectURL(compressed) });
     }
+    setPending((prev) => [...prev, ...staged]);
     if (fileRef.current) fileRef.current.value = '';
   };
+
+  function acceptShot() {
+    if (!current) return;
+    draft.addPhoto(current.blob);
+    URL.revokeObjectURL(current.url);
+    setPending((prev) => prev.slice(1));
+  }
+
+  function retakeShot() {
+    if (!current) return;
+    URL.revokeObjectURL(current.url);
+    const remaining = pending.length - 1;
+    setPending((prev) => prev.slice(1));
+    // Straight back into the camera for another try.
+    if (remaining === 0) open();
+  }
 
   return (
     <PhoneFrame bg="#000" dark>
@@ -465,6 +494,102 @@ export function Camera() {
         style={{ display: 'none' }}
         onChange={(e) => onFiles(e.target.files)}
       />
+
+      {/* ─── Confirm step: review the shot before it joins the report ─── */}
+      {current && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 60,
+            background: '#0a0e0c',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '58px 14px 14px',
+            }}
+            className="kt-safe-top"
+          >
+            <img
+              src={current.url}
+              alt={t('camera.previewAlt')}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                borderRadius: 14,
+              }}
+            />
+          </div>
+          <div
+            style={{
+              padding: '14px 18px 42px',
+              borderTop: '1px solid rgba(196,152,76,0.20)',
+              background: '#0a1410',
+            }}
+          >
+            {pending.length > 1 && (
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: colors.goldSoft,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                  marginBottom: 10,
+                }}
+              >
+                {t('camera.previewCount', { i: 1, n: pending.length })}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={retakeShot}
+                className="kt-tap"
+                style={{
+                  flex: 1,
+                  height: 54,
+                  borderRadius: 14,
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.20)',
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  letterSpacing: 0.3,
+                }}
+              >
+                {t('camera.retake')}
+              </button>
+              <button
+                onClick={acceptShot}
+                className="kt-tap"
+                style={{
+                  flex: 1.4,
+                  height: 54,
+                  borderRadius: 14,
+                  background: `linear-gradient(135deg, ${colors.gold} 0%, ${colors.goldDeep} 100%)`,
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 800,
+                  letterSpacing: 0.3,
+                }}
+              >
+                {t('camera.usePhoto')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PhoneFrame>
   );
 }
