@@ -5,6 +5,7 @@ import { Field } from './Field';
 import { PhotoTile } from './PhotoTile';
 import { useTheme } from '../theme-context';
 import { useI18n } from '../lib/i18n';
+import { useSessionStore } from '../store/session';
 import type { Employee } from '../lib/types';
 import type { CreateCaseInput } from '../lib/cases';
 
@@ -45,6 +46,7 @@ export function CaseForm({
 }: CaseFormProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const me = useSessionStore((s) => s.employee);
 
   const [jobType, setJobType] = useState(initial?.jobType ?? '');
   const [clientOrSite, setClientOrSite] = useState(initial?.clientOrSite ?? '');
@@ -77,13 +79,24 @@ export function CaseForm({
     }
     try {
       const sb = getSupabase();
+      // Everyone active can take work — staff can assign cases to themselves
+      // too. Field employees are listed first; super_admin stays hidden from
+      // everyone except that super_admin (mirrors the Team screen rule).
       const { data } = await sb
         .from('employees')
         .select('id, name, role, active, initials, avatar_color, created_at')
         .eq('active', true)
-        .eq('role', 'employee')
         .order('created_at', { ascending: true });
-      setEmployees((data ?? []) as Employee[]);
+      const ORDER: Record<string, number> = {
+        employee: 0,
+        supervisor: 1,
+        admin: 2,
+        super_admin: 3,
+      };
+      const list = ((data ?? []) as Employee[])
+        .filter((e) => e.role !== 'super_admin' || e.id === me?.id)
+        .sort((a, b) => (ORDER[a.role] ?? 9) - (ORDER[b.role] ?? 9));
+      setEmployees(list);
     } catch (err) {
       console.error('[KT] loadEmployees failed', err);
     } finally {
@@ -446,7 +459,24 @@ export function CaseForm({
                   >
                     {e.initials}
                   </div>
-                  <span>{e.name}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {e.name}
+                    {e.id === me?.id ? ` (${t('cases.you')})` : ''}
+                  </span>
+                  {e.role !== 'employee' && (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: colors.goldDeep,
+                        letterSpacing: 0.6,
+                        textTransform: 'uppercase',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {t(ROLE_KEY[e.role] ?? 'common.roleEmployee')}
+                    </span>
+                  )}
                 </div>
               ))
             )}

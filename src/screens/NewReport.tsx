@@ -5,6 +5,7 @@ import { AppBar } from '../components/AppBar';
 import { Field } from '../components/Field';
 import { PrimaryButton, SecondaryButton } from '../components/Button';
 import { PhotoTile } from '../components/PhotoTile';
+import { Lightbox } from '../components/Lightbox';
 import { CameraIcon, CheckIcon, PinIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { useDraftStore } from '../store/draft';
@@ -26,6 +27,7 @@ export function NewReport() {
   const { state: gps, capture } = useGeolocation(true);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const caseId = searchParams.get('case');
   const [caseInfo, setCaseInfo] = useState<{ ref: string; job: string } | null>(
@@ -277,9 +279,11 @@ export function NewReport() {
                 height={68}
                 src={p.previewUrl}
                 label={String(i + 1).padStart(2, '0')}
+                onClick={() => p.previewUrl && setPreview(p.previewUrl)}
                 onRemove={() => draft.removePhoto(p.id)}
               />
             ))}
+            <Lightbox src={preview} onClose={() => setPreview(null)} />
             <div
               onClick={() => navigate('/camera')}
               className="kt-tap"

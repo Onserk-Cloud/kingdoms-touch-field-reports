@@ -1,7 +1,7 @@
 {
   "name": "kingdom-touch",
   "private": true,
-  "version": "2.4.0",
+  "version": "2.5.0",
   "type": "module",
   "description": "Kingdoms Touch Services · Field Reports PWA",
   "scripts": {
@@ -24,7 +24,7 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
+    "@types/node": "^20.19.43",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.16.0",

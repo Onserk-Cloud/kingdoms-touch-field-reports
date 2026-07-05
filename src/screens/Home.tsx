@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { TabBar } from '../components/TabBar';
 import { LogoMark } from '../components/LogoMark';
@@ -90,6 +90,11 @@ export function Home() {
         .filter(Boolean)
         .join(' · ')
     : '';
+
+  // Staff live in the operations panel — the employee hub is field-crew only.
+  if (employee && employee.role !== 'employee') {
+    return <Navigate to="/supervisor" replace />;
+  }
 
   return (
     <PhoneFrame bg={colors.ivory}>

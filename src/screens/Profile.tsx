@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
-import { TabBar } from '../components/TabBar';
+import { TabBar, AdminTabBar } from '../components/TabBar';
 import { LogoMark } from '../components/LogoMark';
 import { SecondaryButton } from '../components/Button';
 import { useTheme } from '../theme-context';
@@ -399,11 +399,15 @@ export function Profile() {
               marginTop: 6,
             }}
           >
-            Kingdoms Touch Services · v 2.4
+            Kingdoms Touch Services · v 2.5
           </div>
         </div>
       </div>
-      <TabBar active="profile" />
+      {employee && employee.role !== 'employee' ? (
+        <AdminTabBar active="settings" />
+      ) : (
+        <TabBar active="profile" />
+      )}
     </PhoneFrame>
   );
 }

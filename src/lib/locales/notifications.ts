@@ -28,7 +28,8 @@ const dict: NsDict = {
     testBody: 'Push notifications are working on this device.',
     sendTest: 'Send test',
     testSending: 'Sending…',
-    testSent: 'Sent — a push should arrive on this device in a few seconds.',
+    testSent:
+      'Sent — lock the screen or switch apps to see the banner (a few seconds).',
     testError: 'Could not send the test. Try again.',
   },
   es: {
@@ -58,7 +59,8 @@ const dict: NsDict = {
     testBody: 'Las notificaciones push funcionan en este dispositivo.',
     sendTest: 'Enviar prueba',
     testSending: 'Enviando…',
-    testSent: 'Enviada — el push debe llegar a este dispositivo en unos segundos.',
+    testSent:
+      'Enviada — bloquea la pantalla o sal de la app para ver el banner (unos segundos).',
     testError: 'No se pudo enviar la prueba. Intenta de nuevo.',
   },
 };

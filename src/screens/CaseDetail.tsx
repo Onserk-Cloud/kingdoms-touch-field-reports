@@ -4,6 +4,7 @@ import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
 import { PrimaryButton, SecondaryButton } from '../components/Button';
 import { PhotoTile } from '../components/PhotoTile';
+import { Lightbox } from '../components/Lightbox';
 import { Badge } from '../components/Badge';
 import { Priority } from '../components/Priority';
 import { useTheme } from '../theme-context';
@@ -195,6 +196,7 @@ export function CaseDetail() {
   const [photos, setPhotos] = useState<CasePhoto[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -573,6 +575,7 @@ export function CaseDetail() {
               key={p.id}
               height={92}
               src={photoUrls[p.id]}
+              onClick={() => photoUrls[p.id] && setPreview(photoUrls[p.id])}
               onRemove={
                 isStaffMember || p.uploadedBy === employee?.id
                   ? () => void handleRemovePhoto(p)
@@ -580,6 +583,7 @@ export function CaseDetail() {
               }
             />
           ))}
+          <Lightbox src={preview} onClose={() => setPreview(null)} />
           <div
             onClick={() => fileRef.current?.click()}
             className="kt-tap"

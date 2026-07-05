@@ -4,6 +4,7 @@ import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
 import { PrimaryButton } from '../components/Button';
 import { PhotoTile } from '../components/PhotoTile';
+import { Lightbox } from '../components/Lightbox';
 import { CheckIcon } from '../components/Icons';
 import { useTheme } from '../theme-context';
 import { useDraftStore } from '../store/draft';
@@ -21,6 +22,7 @@ export function Review() {
   const employee = useSessionStore((s) => s.employee);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const Row = ({
     label,
@@ -262,9 +264,11 @@ export function Review() {
                   height={88}
                   src={p.previewUrl}
                   label={`#${i + 1}`}
+                  onClick={() => p.previewUrl && setPreview(p.previewUrl)}
                 />
               ))}
             </div>
+            <Lightbox src={preview} onClose={() => setPreview(null)} />
           </div>
         )}
 

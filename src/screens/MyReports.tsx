@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { PhoneFrame } from '../components/PhoneFrame';
 import { AppBar } from '../components/AppBar';
 import { TabBar } from '../components/TabBar';
@@ -153,6 +153,11 @@ export function MyReports() {
       r.status === 'error';
     navigate(localOnly ? `/report/${r.id}/edit` : `/report/${r.id}`);
   };
+
+  // Staff live in the operations panel — the employee hub is field-crew only.
+  if (employee && employee.role !== 'employee') {
+    return <Navigate to="/supervisor" replace />;
+  }
 
   return (
     <PhoneFrame bg={colors.ivory}>
