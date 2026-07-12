@@ -15,7 +15,7 @@ con Supabase + Vercel, para que la cuadrilla y el staff la usen de verdad.
 ## Resumen de pasos
 
 1. Crear el proyecto en Supabase
-2. Correr las **17 migraciones SQL** en orden
+2. Correr las **19 migraciones SQL** en orden
 3. Desplegar las **4 Edge Functions**
 4. Configurar las **notificaciones push** (VAPID)
 5. Conectar la app (`.env.local`)
@@ -42,7 +42,7 @@ Tiempo estimado: **45–60 minutos**.
 
 ---
 
-## 2. Crear las tablas (17 migraciones SQL)
+## 2. Crear las tablas (19 migraciones SQL)
 
 **Opción A — SQL Editor (lo más rápido):**
 
@@ -53,9 +53,10 @@ Tiempo estimado: **45–60 minutos**.
    `0005_employee_names` → `0006_report_update_check` → `0007_security_hardening` →
    `0008_cases` → `0009_push` → `0010_case_photos` → `0011_due_reminders` →
    `0012_urgent_time_reminder` → `0013_case_activity` → `0014_profile` →
-   `0015_status_and_profile` → `0016_profile_prefs_rpc` → `0017_case_notifications`.
-   - Saltarte alguna deja la app sin roles, sin casos, sin push, sin revisión
-     o sin las protecciones de seguridad.
+   `0015_status_and_profile` → `0016_profile_prefs_rpc` → `0017_case_notifications` →
+   `0018_comment_notifications` → `0019_photo_and_status_notifications`.
+   - Saltarte alguna deja la app sin roles, sin casos, sin push, sin revisión,
+     sin notificaciones de comentarios/fotos/aprobación o sin las protecciones de seguridad.
 3. Verifica en **Table Editor** que existen `employees`, `reports`,
    `report_photos`, `notifications`, `login_attempts`, `cases`, `case_photos`,
    `case_activity`, `push_subscriptions`; y en **Storage** los buckets privados
@@ -69,7 +70,7 @@ Tiempo estimado: **45–60 minutos**.
 npm install -g supabase
 supabase login
 supabase link --project-ref <TU-PROJECT-REF>
-supabase db push   # aplica las 17 migraciones en orden
+supabase db push   # aplica las 19 migraciones en orden
 ```
 
 *(También puedes ejecutarlas vía la Management API de Supabase si automatizas

@@ -65,7 +65,7 @@ kingdom-touch/
 ├── public/                           # icons/ (PWA), brand/, docs/ (manuales
 │                                     # PDF EN/ES), push-sw.js, robots.txt
 ├── supabase/
-│   ├── migrations/                   # 0001_init … 0017_case_notifications (17)
+│   ├── migrations/                   # 0001_init … 0019_photo_and_status_notifications (19)
 │   ├── functions/                    # login-with-pin, admin-users,
 │   │                                 # send-push, run-due-check
 │   └── config.toml                   # flags verify_jwt por función
@@ -139,7 +139,7 @@ npm install
 
 ## 3. Aplicar las migraciones
 
-> Hay **17 migraciones** en `supabase/migrations/`. Aplícalas **en orden** —
+> Hay **19 migraciones** en `supabase/migrations/`. Aplícalas **en orden** —
 > cada una es idempotente (segura de re-ejecutar). Saltarte alguna deja la
 > app sin casos, sin push o sin las protecciones de seguridad.
 
@@ -162,6 +162,8 @@ npm install
 | 0015 | `status_and_profile.sql`       | Estados `in_review`/`approved`, `est_time`, `notification_prefs` y `crew`                                     |
 | 0016 | `profile_prefs_rpc.sql`        | RPC `update_my_profile` de 7 args (persiste `notification_prefs` + `crew`)                                    |
 | 0017 | `case_notifications.sql`       | Notificaciones de casos **server-side** (trigger SECURITY DEFINER en `cases`; arregla el INSERT bloqueado por RLS) + notificación de prueba propia |
+| 0018 | `comment_notifications.sql`    | Trigger sobre `case_activity`: al comentar un caso notifica a la **contraparte** (asignado ↔ creador) + agrega `case_id` al payload del push para **deep-link** al caso |
+| 0019 | `photo_and_status_notifications.sql` | Añade `photo` a los tipos de actividad; al **agregar una foto** al caso registra evento y notifica a la contraparte, y al **aprobar** un caso notifica al empleado («tu trabajo fue aprobado») |
 
 ### Opción A · SQL editor
 
@@ -172,7 +174,7 @@ Pega y ejecuta cada archivo en **SQL Editor → New query**, en orden.
 ```bash
 supabase login
 supabase link --project-ref <YOUR-PROJECT-REF>
-supabase db push   # aplica las 17 migraciones en orden
+supabase db push   # aplica las 19 migraciones en orden
 ```
 
 > Tras `0001_init.sql` quedan 3 empleados sembrados (Sandra Ruiz `0000`
@@ -407,7 +409,7 @@ restablece el PIN desde Gestión de equipo.
 
 **No llegan las notificaciones push**
 Revisa en orden: (1) `VITE_VAPID_PUBLIC_KEY` en el frontend y los secrets
-`VAPID_*` en Supabase; (2) la migración `0009_push.sql` (+ `0017`) aplicada
+`VAPID_*` en Supabase; (2) las migraciones `0009_push.sql` (+ `0017`/`0018`/`0019`) aplicadas
 y `pg_net` habilitado; (3) `send-push` desplegada con *Verify JWT = OFF*;
 (4) en iOS, la PWA instalada en Home Screen. La pantalla Notifications tiene
 una notificación de prueba.

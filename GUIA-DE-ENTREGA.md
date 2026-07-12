@@ -155,7 +155,7 @@ npx tsx scripts/check-i18n.ts   # verifica paridad ES/EN de textos
 ```
 
 ### Base de datos (SQL en orden, en Supabase → SQL Editor)
-`supabase/migrations/` — **17 migraciones**, todas idempotentes (seguras de re-ejecutar):
+`supabase/migrations/` — **19 migraciones**, todas idempotentes (seguras de re-ejecutar):
 1. `0001_init.sql` — tablas base, RLS, storage, seed
 2. `0002_roles.sql` — roles admin/super_admin + RLS por staff (UPDATE con `WITH CHECK`)
 3. `0003_notifications.sql` — notificaciones + trigger
@@ -173,6 +173,8 @@ npx tsx scripts/check-i18n.ts   # verifica paridad ES/EN de textos
 15. `0015_status_and_profile.sql` — estados `in_review`/`approved` + campos de perfil
 16. `0016_profile_prefs_rpc.sql` — preferencias de notificación + cuadrilla vía RPC
 17. `0017_case_notifications.sql` — notificaciones de caso del lado del servidor (trigger)
+18. `0018_comment_notifications.sql` — al comentar un caso notifica a la contraparte (asignado ↔ creador) + `case_id` en el push para deep-link al caso
+19. `0019_photo_and_status_notifications.sql` — al agregar una foto al caso registra evento y notifica a la contraparte; al aprobar un caso notifica al empleado
 
 *(En un proyecto nuevo se corren **todas en orden**; en el del cliente, solo las que
 falten — al ser idempotentes no pasa nada por repetir una.)*
